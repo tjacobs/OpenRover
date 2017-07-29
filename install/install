@@ -1,0 +1,57 @@
+#!/bin/bash
+
+# Installs the things needed to run.
+echo "Installing."
+
+if [ "$1" == "full" ]; then
+	# Update system
+	echo "Updating system."
+	sudo apt-get update -y
+	sudo apt-get upgrade -y
+	echo "Done."
+fi
+
+# Install
+echo ""
+echo "Installing requirements."
+sudo apt-get install -y python-dev
+sudo apt-get install -y python-picamera python3-picamera
+sudo apt-get install -y python-opencv
+sudo apt-get install -y python-visual
+sudo apt-get install -y git
+sudo apt-get install -y geany
+sudo apt-get -y autoremove
+
+echo "Installing python modules."
+sudo pip install -q keyboard
+sudo pip install -q picamera[array]
+sudo pip install -q python_Xlib
+sudo pip install -q pynput
+sudo pip install -q pyserial
+sudo pip install -q six
+sudo pip install -q asyncio
+sudo pip install -U socketIO-client
+sudo pip install -q websockets
+sudo pip install -q python-osc
+echo "Done."
+
+git config --global push.default simple
+git config --global user.name "Rover"
+
+# Raspberry Pi 3 has broken UART serial output pins because Bluetooth uses the serial line and breaks it. 
+# If you need to use it, you can disable Bluetooth by uncommenting these lines and running install.
+#echo ""
+#echo "Enabling serial bus."
+#sudo bash -c "echo 'dtoverlay=pi3-disable-bt' >> /boot/config.txt"
+#echo "Done."
+
+# Done
+echo ""
+echo "All done. Enjoy."
+
+# Todo:
+echo "sudo raspi-config, set keyboard to US"
+echo "sudo raspi-config, enable camera"
+echo "sudo raspi-config, enable I2C"
+echo "sudo raspi-config, enable SSH"
+
