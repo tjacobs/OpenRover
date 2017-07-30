@@ -24,6 +24,8 @@ def process(image):
 camera.startCamera( (640, 368) )
 
 # Loop
+frames_per_second = 0
+time_start = time.time()
 while True:
 
     # Get a frame
@@ -39,13 +41,20 @@ while True:
     processed_frame = process(vision_frame)
 
     # Save
-    mpimg.imsave('out.png', processed_frame) 
+#    mpimg.imsave('out.png', processed_frame) 
 
     # Open it to see
-    img = Image.open('out.png')
-    img.show() 
+#    img = Image.open('out.png')
+#    img.show() 
 
-    time.sleep( 5 )
+#    break
+
+    # Count frames per second
+    frames_per_second += 1
+    if( time.time() - time_start > 1.0 ):
+        print( "FPS: %.0f" % frames_per_second)
+        frames_per_second = 0
+        time_start = time.time()
 
     # Show
 #    cv2.imshow( "preview", processed_frame )

@@ -24,8 +24,11 @@ def startCamera( resolution=(160, 128) ):
 		picamera = None
 
 		# Try regular USB webcam
-		print("Starting webcam capture.")
-		cap = cv2.VideoCapture(0)
+		try:
+			print("Starting webcam capture.")
+			cap = cv2.VideoCapture(0)
+		except:
+			print("Error starting cam")
 
 def stopCamera():
 	global cap
