@@ -1,9 +1,9 @@
 import time
 import sys
+import cv2
 
-# Try some OpenCV and Picamera
+# Try some Picamera
 try:
-	import cv2
 	import picamera
 	from picamera.array import PiRGBArray
 	from picamera import PiCamera
@@ -12,9 +12,10 @@ except:
 
 rawCapture = None
 picamera = None
+cap = None
 
 def startCamera( resolution=(160, 128) ):
-	global rawCapture, picamera
+	global rawCapture, picamera, cap
 	try:
 		picamera = PiCamera()
 		picamera.resolution = resolution
@@ -22,20 +23,30 @@ def startCamera( resolution=(160, 128) ):
 	except:
 		picamera = None
 
+		# Try regular USB webcam
+		print("Starting webcam capture.")
+		cap = cv2.VideoCapture(0)
+
+def stopCamera():
+	global cap
+	cap.release()
+
 def saveFrame(filepath):
 	global picamera
 	picamera.start_preview()
 	picamera.capture(filepath)
 
 def getFrame():
-	global rawCapture, picamera
+	global rawCapture, picamera, cap
 	if rawCapture:
 		rawCapture.truncate(0)
 		picamera.capture(rawCapture, format="bgr") #, resize=(640, 360))
 		return rawCapture.array
+	else:
+		# Capture frame from regular USB webcam
+	    ret, frame = cap.read()
+	    return frame
 
 def showFrame(image):
 	cv2.imshow( "Image", image )
 	cv2.waitKey(0)
-
-

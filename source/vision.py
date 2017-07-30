@@ -186,8 +186,8 @@ def draw_lanes(image, processed_image, lanes_image, left_fitx, right_fitx, ploty
     # Write curve radius
     font = cv2.FONT_HERSHEY_SIMPLEX
     try:
-        cv2.putText(result, "Curve Radius: " + str( int( curve_radius ) ) + "m", (10, 50), font, 1.5, (255, 255, 255), 3, cv2.LINE_AA)
-        cv2.putText(result, "Offset Distance: " + str( round( offset_distance, 2 ) ) + "m", (10, 100), font, 1.5, (255, 255, 255), 3, cv2.LINE_AA)
+        cv2.putText(result, "Curve Radius: " + str( int( curve_radius ) ) + "m", (10, 150), font, 1.0, (255, 255, 255), 3, cv2.LINE_AA)
+        cv2.putText(result, "Offset Distance: " + str( round( offset_distance, 2 ) ) + "m", (10, 200), font, 1.0, (255, 255, 255), 3, cv2.LINE_AA)
     except:
         pass
 
@@ -350,4 +350,22 @@ def create_video( input_video, output_video ):
     video = VideoFileClip( input_video )
     video_processed = video.fl_image( pipeline )
     video_processed.write_videofile( output_video, audio=False )
+
+# Test vision pipeline on a stored image and video
+def test_pipeline():    
+    # Open a sample image
+    image = mpimg.imread('test_images/straight_lines1.jpg') 
+
+    # Run our vision image processing pipeline
+    pipelined_image = pipeline(image)
+
+    # Save
+    mpimg.imsave('out.png', pipelined_image) 
+
+    # Open it to see
+    img = Image.open('out.png')
+    img.show() 
+
+    # Create video
+    vision.create_video( "video.mp4", "output.mp4" )
 
