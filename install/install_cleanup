@@ -1,0 +1,10 @@
+#!/bin/bash
+
+echo "Cleaning up disk."
+
+# Delete things
+sudo apt-get remove -y --purge libreoffice-*
+sudo apt-get remove -y --purge wolfram-engine
+sudo apt-get clean -y
+sudo apt-get autoremove -y
+
