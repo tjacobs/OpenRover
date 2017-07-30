@@ -3,7 +3,6 @@ import vision
 import cv2
 import matplotlib.pyplot as plt
 import matplotlib.image as mpimg
-from PIL import Image   
 import time                                                                             
 
 # Frame processing steps
@@ -14,7 +13,8 @@ def process(image):
 
     return image
 
-#vision.test_pipeline()
+vision.test_pipeline()
+exit()
 
 # Create window
 #cv2.namedWindow( "preview" )
@@ -41,13 +41,13 @@ while True:
     processed_frame = process(vision_frame)
 
     # Save
-#    mpimg.imsave('out.png', processed_frame) 
+    mpimg.imsave('out.png', processed_frame) 
 
     # Open it to see
-#    img = Image.open('out.png')
-#    img.show() 
+    img = Image.open('out.png')
+    img.show() 
 
-#    break
+    time.sleep( 5 )
 
     # Count frames per second
     frames_per_second += 1

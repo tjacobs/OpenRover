@@ -3,6 +3,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 import matplotlib.image as mpimg
 from moviepy.editor import VideoFileClip
+from PIL import Image   
 import time
 import glob
 
@@ -183,6 +184,21 @@ def draw_lanes(image, processed_image, lanes_image, left_fitx, right_fitx, ploty
     offset_distance = lane_centre - image_centre
     offset_distance *= xm_per_pix
 
+    # Draw steering output
+    steering_position = -100000.0 / curve_radius
+
+    # Black bar
+    steering_bar_width = image.shape[1] / 2
+    steering = np.array( [[[image_centre - steering_bar_width/2, 10], [image_centre + steering_bar_width/2, 10], 
+                           [image_centre + steering_bar_width/2, 60], [image_centre - steering_bar_width/2, 60]]], dtype=np.int32 )
+    cv2.fillPoly(result, np.int_([steering]), (10, 20, 10))
+
+    # Green indicator
+    steering_bar_width = 50
+    steering = np.array( [[[steering_position + image_centre - steering_bar_width/2, 15], [steering_position + image_centre + steering_bar_width/2, 15], 
+                           [steering_position + image_centre + steering_bar_width/2, 55], [steering_position + image_centre - steering_bar_width/2, 55]]], dtype=np.int32 )
+    cv2.fillPoly(result, np.int_([steering]), (10, 180, 100))
+
     # Write curve radius
     font = cv2.FONT_HERSHEY_SIMPLEX
     try:
@@ -298,8 +314,6 @@ def threshold(image):
 
 # -------------- The pipeline --------------
 
-
-
 # The full pipeline
 curve_radius = 0
 def pipeline( image ):
@@ -309,15 +323,23 @@ def pipeline( image ):
     # Define source, dest and matricies for perspective stretch and stretch back
     if M == None:
         src = np.float32(
-            [[538, 460], 
-            [740, 460],
-            [0, 690],
-            [1280, 690]])
+            [[image.shape[1]/2-200, 100], 
+            [image.shape[1]/2+200, 100],
+            [0, image.shape[0]],
+            [image.shape[1], image.shape[0]]])
         dest = np.float32(
             [[0, 0],
              [image.shape[1], 0],
              [0, image.shape[0]*2],
              [image.shape[1], image.shape[0]*2]])
+
+        # Test images
+        src = np.float32(
+            [[538, 460], 
+            [740, 460],
+            [0, 690],
+            [1280, 690]])
+
         M = cv2.getPerspectiveTransform(src, dest)
         Minv = cv2.getPerspectiveTransform(dest, src)
     
@@ -360,12 +382,12 @@ def test_pipeline():
     pipelined_image = pipeline(image)
 
     # Save
-    mpimg.imsave('out.png', pipelined_image) 
+    mpimg.imsave('output.png', pipelined_image) 
 
     # Open it to see
-    img = Image.open('out.png')
+    img = Image.open('output.png')
     img.show() 
 
     # Create video
-    vision.create_video( "video.mp4", "output.mp4" )
+    create_video( "test_videos/curves.mp4", "output.mp4" )
 
