@@ -33,6 +33,7 @@ sudo pip install -q asyncio
 sudo pip install -U socketIO-client
 sudo pip install -q websockets
 sudo pip install -q python-osc
+sudo pip install rcpy
 echo "Done."
 
 git config --global push.default simple
