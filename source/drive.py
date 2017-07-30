@@ -1,5 +1,6 @@
 import camera
 import vision
+import motors
 import cv2
 import matplotlib.pyplot as plt
 import matplotlib.image as mpimg
@@ -39,6 +40,12 @@ while True:
 
     # Post process
     processed_frame = process(vision_frame)
+
+    # Move
+    speed = 0.1
+    steering = 0
+    motors.setMotorSpeed(1, speed)
+    motors.setMotorSpeed(2, steering)
 
     # Save
     mpimg.imsave('out.png', processed_frame) 
