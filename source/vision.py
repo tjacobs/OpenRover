@@ -150,14 +150,14 @@ def fit_curves( leftx, rightx, ploty ):
 
     # Calculate the new radii of curvature
     y_eval = np.max(ploty)/1.0
-    left_curverad =  ((1 + (2 *  left_fit_cr[0] * y_eval * ym_per_pix +  left_fit_cr[1]) **2) **1.5) / np.absolute(2 *  left_fit_cr[0])
-    right_curverad = ((1 + (2 * right_fit_cr[0] * y_eval * ym_per_pix + right_fit_cr[1]) **2) **1.5) / np.absolute(2 * right_fit_cr[0])
+    left_curverad =  ((1 + (2 *  left_fit_cr[0] * y_eval * ym_per_pix +  left_fit_cr[1]) **2) **1.5) / (2 *  left_fit_cr[0])
+    right_curverad = ((1 + (2 * right_fit_cr[0] * y_eval * ym_per_pix + right_fit_cr[1]) **2) **1.5) / (2 * right_fit_cr[0])
 
     # Now our radius of curvature is in meters
     return left_curverad, right_curverad, left_fitx, right_fitx, ploty
 
 # Define function to draw the road
-def draw_lanes(image, processed_image, lanes_image, left_fitx, right_fitx, ploty, curve_radius):
+def draw_lanes(image, processed_image, lanes_image, left_fitx, right_fitx, ploty, steering_position, speed):
     # Create an image to draw the lines on
     greyscale_blank_image = np.zeros_like(processed_image).astype(np.uint8)
     coloured_image = np.dstack((greyscale_blank_image, greyscale_blank_image, greyscale_blank_image))
@@ -184,9 +184,6 @@ def draw_lanes(image, processed_image, lanes_image, left_fitx, right_fitx, ploty
     offset_distance = lane_centre - image_centre
     offset_distance *= xm_per_pix
 
-    # Draw steering output
-    steering_position = -100000.0 / curve_radius
-
     # Black bar
     steering_bar_width = image.shape[1] / 2
     steering = np.array( [[[image_centre - steering_bar_width/2, 10], [image_centre + steering_bar_width/2, 10], 
@@ -198,6 +195,16 @@ def draw_lanes(image, processed_image, lanes_image, left_fitx, right_fitx, ploty
     steering = np.array( [[[steering_position + image_centre - steering_bar_width/2, 15], [steering_position + image_centre + steering_bar_width/2, 15], 
                            [steering_position + image_centre + steering_bar_width/2, 55], [steering_position + image_centre - steering_bar_width/2, 55]]], dtype=np.int32 )
     cv2.fillPoly(result, np.int_([steering]), (10, 180, 100))
+
+    # Black bar
+    speed_bar = np.array( [[[image_centre - 25, 70], [image_centre + 25, 70], 
+                           [image_centre + 25, 220], [image_centre - 25, 220]]], dtype=np.int32 )
+    cv2.fillPoly(result, np.int_([speed_bar]), (10, 20, 10))
+
+    # Green indicator
+    speed_bar = np.array( [[[image_centre - 25, 180-speed], [image_centre + 25, 180-speed], 
+                           [image_centre + 25, 220-speed], [image_centre - 25, 220-speed]]], dtype=np.int32 )
+    cv2.fillPoly(result, np.int_([speed_bar]), (10, 180, 100))
 
     # Write curve radius
     font = cv2.FONT_HERSHEY_SIMPLEX
@@ -315,9 +322,10 @@ def threshold(image):
 # -------------- The pipeline --------------
 
 # The full pipeline
-curve_radius = 0
+steering_position = 0
+speed = 0
 def pipeline( image ):
-    global curve_radius
+    global speed, steering_position
     global M, Minv
 
     # Define source, dest and matricies for perspective stretch and stretch back
@@ -356,14 +364,27 @@ def pipeline( image ):
     left_curverad, right_curverad, left_fitx, right_fitx, ploty = fit_curves(left_fit, right_fit, ploty)
 
     # Update smoothed curve radius frame by frame, 20% each time
-    new_curve_radius = (left_curverad + right_curverad) / 2
-    if curve_radius == 0:
-        curve_radius = new_curve_radius
+    curve_radius = (left_curverad + right_curverad) / 2
+
+    # Figure out possible new steering position from current curve_radius
+    if curve_radius > 900 or curve_radius < -900:
+        new_steering_position = 0
+    elif curve_radius == 0:
+        new_steering_position = 0
     else:
-        curve_radius += ( (new_curve_radius - curve_radius) / 20 )
+        new_steering_position = 50000.0 / curve_radius
+
+    # Update steering position 20% each time
+    if new_steering_position == 0 or new_steering_position > 100 or new_steering_position < -100:
+        pass
+    else:
+        steering_position += ( (new_steering_position - steering_position) / 20 )
+
+    # Test speed
+    speed = max(0, 20 - abs(steering_position)/4)
 
     # Draw those lines
-    image_out = draw_lanes(image, processed_image, lanes_image, left_fitx, right_fitx, ploty, curve_radius)
+    image_out = draw_lanes(image, processed_image, lanes_image, left_fitx, right_fitx, ploty, steering_position, speed)
     return image_out
 
 # Define video function
