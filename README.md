@@ -1,7 +1,7 @@
-# Rover
-# A simple Self Driving Car.
+## Rover
+### A simple Self Driving Car.
 
-Runs on Beagle Bone Blue, Raspberry Pi, and ODROID XU4.
+Runs on Beagle Bone Blue, Raspberry Pi 3, and ODROID XU4.
 
 Uses a webcam or Pi cam and OpenCV machine vision to see the race lane lines and steer the car around the track.
 
