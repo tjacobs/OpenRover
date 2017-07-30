@@ -6,6 +6,10 @@ from moviepy.editor import VideoFileClip
 import time
 import glob
 
+# Globals
+M = None
+Minv = None
+
 # -------- Lane finding, drawing, curve fitting functions --------
 
 # Find those lines
@@ -15,7 +19,7 @@ def find_lanes(processed_image):
     windows_image = np.zeros_like(processed_image)
 
     # Take a histogram of the bottom half of the image
-    histogram = np.sum(processed_image[processed_image.shape[0]/2:,:], axis=0)
+    histogram = np.sum(processed_image[int(processed_image.shape[0]/2):,:], axis=0)
 
     # Find the peak of the left and right halves of the histogram
     # These will be the starting point for the left and right lines
@@ -129,9 +133,9 @@ def find_lanes(processed_image):
     return windows_image, lanes_image, coloured_image, combined_image, left_fitx, right_fitx, ploty
 
 # Fit those curves
+ym_per_pix = 30 / 1440 # meters per pixel in y dimension (height of warped image)
+xm_per_pix = 3.7 / 740 # meters per pixel in x dimension (midpoint in road, 740-540 = 200. (200 + 1280) / 2 = 740 )
 def fit_curves( leftx, rightx, ploty ):
-    ym_per_pix = 30 / 1440 # meters per pixel in y dimension (height of warped image)
-    xm_per_pix = 3.7 / 740 # meters per pixel in x dimension (midpoint in road, 740-540 = 200. (200 + 1280) / 2 = 740 )
 
     # Fit a second order polynomial to pixel positions in each lane line
     left_fit = np.polyfit(ploty, leftx, 2)
@@ -152,12 +156,12 @@ def fit_curves( leftx, rightx, ploty ):
     return left_curverad, right_curverad, left_fitx, right_fitx, ploty
 
 # Define function to draw the road
-def draw_lanes(image, lanes_image, left_fitx, right_fitx, ploty, curve_radius):
+def draw_lanes(image, processed_image, lanes_image, left_fitx, right_fitx, ploty, curve_radius):
     # Create an image to draw the lines on
     greyscale_blank_image = np.zeros_like(processed_image).astype(np.uint8)
     coloured_image = np.dstack((greyscale_blank_image, greyscale_blank_image, greyscale_blank_image))
 
-    # Draw the lane onto the image
+    # Draw the road as a big green rectangle onto the blank image
     pts_left = np.array([np.transpose(np.vstack([left_fitx, ploty]))])
     pts_right = np.array([np.flipud(np.transpose(np.vstack([right_fitx, ploty])))])
     pts = np.hstack((pts_left, pts_right))
@@ -294,50 +298,50 @@ def threshold(image):
 
 # -------------- The pipeline --------------
 
+
+
 # The full pipeline
 curve_radius = 0
 def pipeline( image ):
     global curve_radius
+    global M, Minv
+
+    # Define source, dest and matricies for perspective stretch and stretch back
+    if M == None:
+        src = np.float32(
+            [[538, 460], 
+            [740, 460],
+            [0, 690],
+            [1280, 690]])
+        dest = np.float32(
+            [[0, 0],
+             [image.shape[1], 0],
+             [0, image.shape[0]*2],
+             [image.shape[1], image.shape[0]*2]])
+        M = cv2.getPerspectiveTransform(src, dest)
+        Minv = cv2.getPerspectiveTransform(dest, src)
     
-    # Threshold
-    thresholded_image, s, _, _, _, _ = threshold( image )
-    return thresholded_image
+    # Threshold image to make the line edges stand out
+    thresholded_image, s, _, _, _, _ = threshold(image)
 
-    # Perspective warp into bird's-eye view
-    img_size = image.shape[::-1]
-
-    # Define source and destination of perspective transform
-    src = np.float32(
-        [[538, 460], 
-        [740, 460],
-        [0, 690],
-        [1280, 690]])
-
-    # Calculate destination
-    dest = np.float32(
-        [[0, 0],
-         [image.shape[1], 0],
-         [0, image.shape[0]*2],
-         [image.shape[1], image.shape[0]*2]])
-    M = cv2.getPerspectiveTransform(src, dest)
-    Minv = cv2.getPerspectiveTransform(dest, src)
+    # Stretch the image out so we have basically a bird's-eye view of the scene in front of us
     processed_image = cv2.warpPerspective(thresholded_image, M, (thresholded_image.shape[1], thresholded_image.shape[0]*2) )
     
-    # Find lanes
+    # Find any lanes
     _, lanes_image, _, _, left_fit, right_fit, ploty = find_lanes(processed_image)
-    
-    # Fit curves
+
+    # Fit poly curves to those lanes
     left_curverad, right_curverad, left_fitx, right_fitx, ploty = fit_curves(left_fit, right_fit, ploty)
 
-    # Update smoothed curve radius
+    # Update smoothed curve radius frame by frame, 20% each time
     new_curve_radius = (left_curverad + right_curverad) / 2
     if curve_radius == 0:
         curve_radius = new_curve_radius
     else:
         curve_radius += ( (new_curve_radius - curve_radius) / 20 )
 
-    # Draw
-    image_out = draw_lanes( image, lanes_image, left_fitx, right_fitx, ploty, curve_radius )
+    # Draw those lines
+    image_out = draw_lanes(image, processed_image, lanes_image, left_fitx, right_fitx, ploty, curve_radius)
     return image_out
 
 # Define video function
