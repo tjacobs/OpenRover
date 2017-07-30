@@ -18,6 +18,9 @@ mpimg.imsave('out.png', pipelined_image)
 img = Image.open('out.png')
 img.show() 
 
+# Create video
+vision.create_video( "video.mp4", "output.mp4" )
+
 exit()
 
 
@@ -72,6 +75,4 @@ while True:
 #image_out = draw_lanes( image, lanes_image, left_fitx, right_fitx, ploty, left_curverad )
 #plot_image = plot( image, image_out, "The Long Green Road" )
 
-# Create video
-#vision.create_video( vision.pipeline, "video.mp4", "output.mp4" )
 

@@ -345,9 +345,9 @@ def pipeline( image ):
     return image_out
 
 # Define video function
-def create_video( pipeline_in, input_video, output_video ):
+def create_video( input_video, output_video ):
     # Process video
     video = VideoFileClip( input_video )
-    video_processed = video.fl_image( pipeline_in )
+    video_processed = video.fl_image( pipeline )
     video_processed.write_videofile( output_video, audio=False )
 
