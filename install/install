@@ -1,6 +1,7 @@
 #!/bin/bash
 
 # Installs the things needed to run.
+echo ""
 echo "Installing."
 
 if [ "$1" == "full" ]; then
@@ -12,8 +13,6 @@ if [ "$1" == "full" ]; then
 fi
 
 # Install
-echo ""
-echo "Installing requirements."
 sudo apt-get install -y python-dev
 sudo apt-get install -y python-picamera python3-picamera
 sudo apt-get install -y python-opencv
@@ -22,6 +21,7 @@ sudo apt-get install -y git
 sudo apt-get install -y geany
 sudo apt-get -y autoremove
 
+echo ""
 echo "Installing python modules."
 sudo pip install -q keyboard
 sudo pip install -q picamera[array]
@@ -33,7 +33,8 @@ sudo pip install -q asyncio
 sudo pip install -U socketIO-client
 sudo pip install -q websockets
 sudo pip install -q python-osc
-sudo pip install rcpy
+sudo pip install -q moviepy
+sudo pip3 install -q rcpy
 echo "Done."
 
 git config --global push.default simple

@@ -5,6 +5,7 @@ import cv2
 import matplotlib.pyplot as plt
 import matplotlib.image as mpimg
 import time                                                                             
+from PIL import Image   
 
 # Frame processing steps
 def process(image):
@@ -14,15 +15,15 @@ def process(image):
 
     return image
 
-vision.test_pipeline()
-exit()
+#vision.test_pipeline()
+#exit()
 
 # Create window
 #cv2.namedWindow( "preview" )
 #cv2.moveWindow( "preview", 10, 10 )
 
 # Start camera
-camera.startCamera( (640, 368) )
+#camera.startCamera( (640, 368) )
 
 # Loop
 frames_per_second = 0
@@ -30,10 +31,13 @@ time_start = time.time()
 while True:
 
     # Get a frame
-    frame = camera.getFrame()
+    #frame = camera.getFrame()
 
     # De-blue
-    frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
+#    frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
+
+    # Open a sample image
+    frame = mpimg.imread('test_images/straight_lines1.jpg') 
 
     # Run through our machine vision pipeline
     vision_frame = vision.pipeline(frame)
@@ -42,19 +46,19 @@ while True:
     processed_frame = process(vision_frame)
 
     # Move
-    speed = 0.1
-    steering = 0
-    motors.setMotorSpeed(1, speed)
-    motors.setMotorSpeed(2, steering)
+    #speed = 0.1
+    #steering = 0
+    #motors.setMotorSpeed(1, speed)
+    #motors.setMotorSpeed(2, steering)
 
     # Save
-    mpimg.imsave('out.png', processed_frame) 
+#    mpimg.imsave('out.png', processed_frame) 
 
     # Open it to see
-    img = Image.open('out.png')
-    img.show() 
+#    img = Image.open('out.png')
+#    img.show() 
 
-    time.sleep( 5 )
+#    time.sleep( 5 )
 
     # Count frames per second
     frames_per_second += 1
@@ -67,12 +71,12 @@ while True:
 #    cv2.imshow( "preview", processed_frame )
 
     # Esc key hit?
- #   key = cv2.waitKey(20)
- #   if key == 27:
- #       break
+    key = cv2.waitKey(20)
+    if key == 27:
+        break
 
 # Close
-#cv2.destroyWindow( "preview" )
-camera.stopCamera( )
+cv2.destroyWindow( "preview" )
+#camera.stopCamera( )
 
 
