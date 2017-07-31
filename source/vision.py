@@ -201,12 +201,12 @@ def draw_lanes(image, processed_image, lanes_image, left_fitx, right_fitx, ploty
 
     # Black bar
     speed_bar = np.array( [[[image_centre - 25, 70], [image_centre + 25, 70], 
-                           [image_centre + 25, 220], [image_centre - 25, 220]]], dtype=np.int32 )
+                           [image_centre + 25, 160], [image_centre - 25, 160]]], dtype=np.int32 )
     cv2.fillPoly(result, np.int_([speed_bar]), (10, 20, 10))
 
     # Green indicator
-    speed_bar = np.array( [[[image_centre - 25, 180-speed], [image_centre + 25, 180-speed], 
-                           [image_centre + 25, 220-speed], [image_centre - 25, 220-speed]]], dtype=np.int32 )
+    speed_bar = np.array( [[[image_centre - 25, 110-speed], [image_centre + 25, 110-speed], 
+                           [image_centre + 25, 160-speed], [image_centre - 25, 160-speed]]], dtype=np.int32 )
     cv2.fillPoly(result, np.int_([speed_bar]), (10, 180, 100))
 
     # Write curve radius
@@ -334,8 +334,8 @@ def pipeline( image ):
     # Define source, dest and matricies for perspective stretch and stretch back
     if M == None:
         src = np.float32(
-            [[image.shape[1]/2-200, 100], 
-            [image.shape[1]/2+200, 100],
+            [[image.shape[1]/2-150, 0], 
+            [image.shape[1]/2+150, 0],
             [0, image.shape[0]],
             [image.shape[1], image.shape[0]]])
         dest = np.float32(

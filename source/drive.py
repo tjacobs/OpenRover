@@ -23,7 +23,8 @@ cv2.namedWindow( "preview" )
 cv2.moveWindow( "preview", 10, 10 )
 
 # Start camera
-camera.startCamera( (640, 368) )
+#camera.startCamera( (640, 368) )
+camera.startCamera( (320, 160) )
 
 # Loop
 frames_per_second = 0
