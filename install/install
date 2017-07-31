@@ -15,6 +15,7 @@ fi
 # Install
 sudo apt-get install -y python-dev
 sudo apt-get install -y python-picamera python3-picamera
+sudo apt-get install -y python-matplotlib
 sudo apt-get install -y python-opencv
 sudo apt-get install -y python-visual
 sudo apt-get install -y git
@@ -23,6 +24,7 @@ sudo apt-get -y autoremove
 
 echo ""
 echo "Installing python modules."
+sudo pip install -q --ignore-installed moviepy
 sudo pip install -q keyboard
 sudo pip install -q picamera[array]
 sudo pip install -q python_Xlib
