@@ -24,6 +24,7 @@ sudo apt-get -y autoremove
 
 echo ""
 echo "Installing python modules."
+sudo pip install -q imutils
 sudo pip install -q --ignore-installed moviepy
 sudo pip install -q keyboard
 sudo pip install -q picamera[array]
