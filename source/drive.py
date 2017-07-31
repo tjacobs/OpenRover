@@ -19,15 +19,19 @@ def process(image):
 #exit()
 
 # Create window
-#cv2.namedWindow( "preview" )
-#cv2.moveWindow( "preview", 10, 10 )
+cv2.namedWindow( "preview" )
+cv2.moveWindow( "preview", 10, 10 )
 
 # Start camera
-#camera.startCamera( (640, 368) )
+camera.startCamera( (640, 368) )
 
 # Loop
 frames_per_second = 0
 time_start = time.time()
+
+# Open a sample image
+frame = mpimg.imread('test_images/straight_lines1.jpg') 
+
 while True:
 
     # Get a frame
@@ -36,14 +40,11 @@ while True:
     # De-blue
 #    frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
 
-    # Open a sample image
-    frame = mpimg.imread('test_images/straight_lines1.jpg') 
-
     # Run through our machine vision pipeline
     vision_frame = vision.pipeline(frame)
 
     # Post process
-    processed_frame = process(vision_frame)
+    processed_frame = process(frame)
 
     # Move
     #speed = 0.1
