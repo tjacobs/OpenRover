@@ -2,7 +2,6 @@ import cv2
 import numpy as np
 import matplotlib.pyplot as plt
 import matplotlib.image as mpimg
-from moviepy.editor import VideoFileClip
 from PIL import Image   
 import time
 import glob
@@ -346,11 +345,11 @@ def pipeline( image ):
              [image.shape[1], image.shape[0]*2]])
 
         # Test images
-        src = np.float32(
-            [[538, 460], 
-            [740, 460],
-            [0, 690],
-            [1280, 690]])
+#        src = np.float32(
+#            [[538, 460], 
+#            [740, 460],
+#            [0, 690],
+#            [1280, 690]])
 
         M = cv2.getPerspectiveTransform(src, dest)
         Minv = cv2.getPerspectiveTransform(dest, src)
@@ -396,6 +395,8 @@ def pipeline( image ):
 
 # Define video function
 def create_video( input_video, output_video ):
+
+    #from moviepy.editor import VideoFileClip
     # Process video
     video = VideoFileClip( input_video )
     video_processed = video.fl_image( pipeline )

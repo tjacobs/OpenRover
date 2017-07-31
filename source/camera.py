@@ -32,7 +32,8 @@ def startCamera( resolution=(160, 128) ):
 
 def stopCamera():
 	global cap
-	cap.release()
+	if cap:
+		cap.release()
 
 def saveFrame(filepath):
 	global picamera

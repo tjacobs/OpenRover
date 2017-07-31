@@ -4,8 +4,8 @@ import motors
 import cv2
 import matplotlib.pyplot as plt
 import matplotlib.image as mpimg
-import time                                                                             
 from PIL import Image   
+import time
 
 # Frame processing steps
 def process(image):
@@ -35,13 +35,13 @@ frame = mpimg.imread('test_images/straight_lines1.jpg')
 while True:
 
     # Get a frame
-    #frame = camera.getFrame()
+    frame = camera.getFrame()
 
     # De-blue
 #    frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
 
     # Run through our machine vision pipeline
-    vision_frame = vision.pipeline(frame)
+    frame = vision.pipeline(frame)
 
     # Post process
     processed_frame = process(frame)
@@ -59,8 +59,6 @@ while True:
 #    img = Image.open('out.png')
 #    img.show() 
 
-#    time.sleep( 5 )
-
     # Count frames per second
     frames_per_second += 1
     if( time.time() - time_start > 1.0 ):
@@ -69,7 +67,7 @@ while True:
         time_start = time.time()
 
     # Show
-#    cv2.imshow( "preview", processed_frame )
+    cv2.imshow( "preview", processed_frame )
 
     # Esc key hit?
     key = cv2.waitKey(20)
@@ -78,6 +76,6 @@ while True:
 
 # Close
 cv2.destroyWindow( "preview" )
-#camera.stopCamera( )
+camera.stopCamera( )
 
 
