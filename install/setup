@@ -3,33 +3,47 @@
 echo ""
 echo "Setting up."
 
-wget http://repo.continuum.io/miniconda/Miniconda3-latest-Linux-armv7l.sh 
+# Install requirements for OpenCV
+sudo apt-get install -y libjpeg-dev libtiff5-dev libjasper-dev libpng12-dev
+sudo apt-get install -y libavcodec-dev libavformat-dev libswscale-dev libv4l-dev
+sudo apt-get install -y libxvidcore-dev libx264-dev
+sudo apt-get install -y libgtk2.0-dev
+sudo apt-get install -y libatlas-base-dev gfortran
+sudo apt-get install -y python2.7-dev python3-dev
+
+# Install Miniconda
+wget -O Miniconda3-latest-Linux-armv7l.sh http://repo.continuum.io/miniconda/Miniconda3-latest-Linux-armv7l.sh 
 chmod +x Miniconda3-latest-Linux-armv7l.sh
 ./Miniconda3-latest-Linux-armv7l.sh
+source ~/.bashrc
+export PATH="/home/pi/miniconda3/bin:$PATH"
 
+# Create py3 env
 conda update conda
 conda create --name py3 python=3
 source activate py3
 
+# Get OpenCV
 wget -O opencv.zip https://github.com/opencv/opencv/archive/3.2.0.zip
 unzip opencv.zip
 
+# Get OpenCV Contrib
 wget -O opencv_contrib.zip https://github.com/opencv/opencv_contrib/archive/3.2.0.zip 
 unzip opencv_contrib.zip
 
+# Install numpy in py3
 pip install numpy
 
+# Build OpenCV
 cd opencv-3.2.0/
 mkdir build
 cd build
-
 cmake -D CMAKE_BUILD_TYPE=RELEASE \
     -D CMAKE_INSTALL_PREFIX=/usr/local \
     -D INSTALL_PYTHON_EXAMPLES=ON \
     -D INSTALL_C_EXAMPLES=OFF \
-    -D OPENCV_EXTRA_MODULES_PATH=~/betabot/opencv_contrib-3.2.0/modules \
-    -D PYTHON_EXECUTABLE=/home/odroid/miniconda3/envs/py3/bin/python \
+    -D OPENCV_EXTRA_MODULES_PATH=~/rover/install/opencv_contrib-3.2.0/modules \
+    -D PYTHON_EXECUTABLE=/home/pi/miniconda3/envs/py3/bin/python \
     -D BUILD_EXAMPLES=ON -DBUILD_SHARED_LIBS=ON -DBUILD_STATIC_LIBS=ON ..
-
 make -j4
 
