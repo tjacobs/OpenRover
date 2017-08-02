@@ -23,6 +23,26 @@ conda update conda
 conda create --name py3 python=3
 source activate py3
 
+# x264
+wget ftp://ftp.videolan.org/pub/videolan/x264/snapshots/last_stable_x264.tar.bz2
+tar xvzf last_stable_x264.tar.bz2
+cd last_stable_x264
+./configure --enable-shared --enable-pic
+make
+sudo make install
+cd ..
+
+
+# FFMpeg
+./configure --enable-gpl --enable-libfaac --enable-libmp3lame --enable-libopencore-amrnb --enable-libopencore-amrwb --enable-libtheora --enable-libvorbis --enable-libx264 --enable-libxvid --enable-nonfree --enable-postproc --enable-version3 --enable-x11grab --enable-shared --enable-pic
+#./configure --enable-gpl --enable-libfaac --enable-libmp3lame
+#–-enable-libopencore-amrnb –-enable-libopencore-amrwb --enable-libtheora
+#--enable-libvorbis --enable-libx264 --enable-libxvid --enable-nonfree
+#--enable-postproc --enable-version3 --enable-x11grab –-enable-shared –-enable-pic
+make
+sudo make install
+cd ..
+
 # Get OpenCV
 wget -O opencv.zip https://github.com/opencv/opencv/archive/3.2.0.zip
 unzip opencv.zip
@@ -46,4 +66,7 @@ cmake -D CMAKE_BUILD_TYPE=RELEASE \
     -D PYTHON_EXECUTABLE=/home/pi/miniconda3/envs/py3/bin/python \
     -D BUILD_EXAMPLES=ON -DBUILD_SHARED_LIBS=ON -DBUILD_STATIC_LIBS=ON ..
 make -j4
+
+
+cmake -D CMAKE_BUILD_TYPE=RELEASE -D CMAKE_INSTALL_PREFIX=/usr/local -D WITH_CUBLAS=ON -D WITH_CUFFT=ON -D WITH_EIGEN=ON -D WITH_OPENGL=ON -D WITH_QT=OFF -D WITH_TBB=ON -D BUILD_SHARED_LIBS=ON -D BUILD_DOCS=ON -D BUILD_EXAMPLES=ON -D BUILD_TESTS=ON -D BUILD_JPEG=ON -D ENABLE_VFPV3=ON -D ENABLE_NEON=ON -D BUILD_NEW_PYTHON_SUPPORT=ON -D WITH_V4L=ON-D INSTALL_C_EXAMPLES=ON -D INSTALL_PYTHON_EXAMPLES=ON  -D WITH_VTK=ON ..
 
