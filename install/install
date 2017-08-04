@@ -14,33 +14,37 @@ fi
 
 # Install
 sudo apt-get install -y python3 python3-pip
-sudo apt-get install -y build-essential cmake pkg-config
 sudo apt-get install -y python-dev
-sudo apt-get install -y python-picamera python3-picamera
-sudo apt-get install -y python-matplotlib
-sudo apt-get install -y python-opencv
-sudo apt-get install -y python-visual
+sudo apt-get install -y build-essential cmake pkg-config
 sudo apt-get install -y git
-sudo apt-get install -y geany
+sudo apt-get install -y zlib1g-dev
 sudo apt-get -y autoremove
+
+#sudo apt-get install -y python-picamera python3-picamera
+#sudo apt-get install -y python-matplotlib
+#sudo apt-get install -y python-opencv
+#sudo apt-get install -y python-visual
+#sudo apt-get install -y geany
 
 echo ""
 echo "Installing python modules."
 sudo pip install -U pip setuptools
-sudo pip install -q imutils
-sudo pip install -q --ignore-installed moviepy
-sudo pip install -q keyboard
-sudo pip install -q picamera[array]
-sudo pip install -q python_Xlib
-sudo pip install -q pynput
-sudo pip install -q pyserial
-sudo pip install -q six
-sudo pip install -q asyncio
-sudo pip install -U socketIO-client
-sudo pip install -q websockets
-sudo pip install -q python-osc
-sudo pip install -q moviepy
-sudo pip3 install -q rcpy
+sudo pip3 install pillow
+sudo pip3 install rcpy
+sudo pip3 install -q imutils
+sudo pip3 install -q --ignore-installed moviepy
+
+#sudo pip install -q keyboard
+#sudo pip install -q picamera[array]
+#sudo pip install -q python_Xlib
+#sudo pip install -q pynput
+#sudo pip install -q pyserial
+#sudo pip install -q six
+#sudo pip install -q asyncio
+#sudo pip install -U socketIO-client
+#sudo pip install -q websockets
+#sudo pip install -q python-osc
+#sudo pip install -q moviepy
 echo "Done."
 
 git config --global push.default simple

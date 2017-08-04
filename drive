@@ -1,6 +1,5 @@
 #!/bin/bash
 
 cd source
-
-python drive.py
+sudo python3 drive.py
 
