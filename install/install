@@ -31,8 +31,8 @@ echo "Installing python modules."
 sudo pip install -U pip setuptools
 sudo pip3 install pillow
 sudo pip3 install rcpy
-sudo pip3 install -q imutils
-sudo pip3 install -q --ignore-installed moviepy
+sudo pip3 install imutils
+sudo pip3 install --ignore-installed moviepy
 
 #sudo pip install -q keyboard
 #sudo pip install -q picamera[array]
@@ -47,8 +47,8 @@ sudo pip3 install -q --ignore-installed moviepy
 #sudo pip install -q moviepy
 echo "Done."
 
-git config --global push.default simple
-git config --global user.name "Rover"
+#git config --global push.default simple
+#git config --global user.name "Rover"
 
 # Raspberry Pi 3 has broken UART serial output pins because Bluetooth uses the serial line and breaks it. 
 # If you need to use it, you can disable Bluetooth by uncommenting these lines and running install.
@@ -56,6 +56,9 @@ git config --global user.name "Rover"
 #echo "Enabling serial bus."
 #sudo bash -c "echo 'dtoverlay=pi3-disable-bt' >> /boot/config.txt"
 #echo "Done."
+
+# Run drive on startup
+sudo cp rc.local /etc/rc.local # Start on system startup (Warning: overwrites rc.local)
 
 # Done
 echo ""
