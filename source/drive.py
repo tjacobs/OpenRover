@@ -1,48 +1,75 @@
-import camera
-import vision
-import motors
-import cv2
-import matplotlib.pyplot as plt
-import matplotlib.image as mpimg
+try:
+	import cv2
+	import camera
+	import vision
+except:
+	print("No OpenCV installed.")
+
 from PIL import Image   
+#import matplotlib.pyplot as plt
+#import matplotlib.image as mpimg
 import time
+import motors
 
-# Frame processing steps
-def process(image):
+# Test motors
+while True:
+    speed = 0.0
+    steering = 0.6
+    motors.setMotor(1, speed)
+    motors.setMotor(2, steering)
+    time.sleep(1)
+	
+    speed = 0.0
+    steering = -0.6
+    motors.setMotor(1, speed)
+    motors.setMotor(2, steering)
+    time.sleep(1)
 
-    # Just put text over it
-    cv2.putText(image, "Rover", (10, 50), cv2.FONT_HERSHEY_SIMPLEX, 1.0, (255, 255, 255))
+    speed = 0.6
+    steering = 0.0
+    motors.setMotor(1, speed)
+    motors.setMotor(2, steering)
+    time.sleep(0.5)
+        
+    speed = 0.0
+    steering = 0.0
+    motors.setMotor(1, speed)
+    motors.setMotor(2, steering)
+    time.sleep(5)
 
-    return image
-
+# Test vision
 #vision.test_pipeline()
 #exit()
 
+# Frame processing steps
+def process(image):
+    # Just put text over it
+    cv2.putText(image, "Rover", (10, 50), cv2.FONT_HERSHEY_SIMPLEX, 1.0, (255, 255, 255))
+    return image
+
 # Create window
-cv2.namedWindow( "preview" )
-cv2.moveWindow( "preview", 10, 10 )
+#cv2.namedWindow( "preview" )
+#cv2.moveWindow( "preview", 10, 10 )
 
 # Start camera
-#camera.startCamera( (640, 368) )
 camera.startCamera( (320, 160) )
-
-# Loop
-frames_per_second = 0
-time_start = time.time()
 
 # Open a sample image
 frame = mpimg.imread('test_images/straight_lines1.jpg') 
 
+# Loop
+frames_per_second = 0
+time_start = time.time()
 while True:
 
     # Get a frame
-    frame = camera.getFrame()
+#    frame = camera.getFrame()
 
     # De-blue
 #    frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
 
     # Run through our machine vision pipeline
-    frame = vision.pipeline(frame)
+#    frame = vision.pipeline(frame)
 
     # Post process
     processed_frame = process(frame)
@@ -50,8 +77,8 @@ while True:
     # Move
     #speed = 0.1
     #steering = 0
-    #motors.setMotorSpeed(1, speed)
-    #motors.setMotorSpeed(2, steering)
+    #motors.setMotor(1, speed)
+    #motors.setMotor(2, steering)
 
     # Save
 #    mpimg.imsave('out.png', processed_frame) 
