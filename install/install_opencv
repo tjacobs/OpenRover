@@ -22,8 +22,8 @@ sudo apt-get install -y libatlas-base-dev gfortran
 sudo apt-get install -y python2.7-dev python3-dev
 
 # Install Miniconda
-if [ ! -x conda ]; then
-	#wget -O miniconda.sh http://repo.continuum.io/miniconda/Miniconda3-latest-Linux-armv7l.sh 
+if [ ! -f miniconda.sh ]; then
+	wget -O miniconda.sh http://repo.continuum.io/miniconda/Miniconda3-latest-Linux-armv7l.sh 
 	chmod +x miniconda.sh
 	bash miniconda.sh -b -p $HOME/miniconda
 	export PATH="$HOME/miniconda/bin:$PATH"
@@ -37,15 +37,16 @@ fi
 source activate py3
 
 # Install numpy in py3
+sudo pip install --upgrade pip
 pip install numpy
 
 # x264
 if [ ! -d x264-snapshot-20170806-2245-stable ]; then
-	#wget ftp://ftp.videolan.org/pub/videolan/x264/snapshots/last_stable_x264.tar.bz2 -O x264.tar.bz2
+	wget ftp://ftp.videolan.org/pub/videolan/x264/snapshots/last_stable_x264.tar.bz2 -O x264.tar.bz2
 	tar xvfj x264.tar.bz2
 	cd x264-snapshot-20170806-2245-stable
 	./configure --enable-shared --enable-pic
-	#make
+	make
 	sudo make install
 	cd $pwd
 fi
@@ -54,11 +55,7 @@ fi
 if [ ! -d ffmpeg ]; then
 	git clone https://git.ffmpeg.org/ffmpeg.git ffmpeg
 	cd ffmpeg
-	./configure --enable-gpl --enable-libfaac --enable-libmp3lame --enable-libopencore-amrnb --enable-libopencore-amrwb --enable-libtheora --enable-libvorbis --enable-libx264 --enable-libxvid --enable-nonfree --enable-postproc --enable-version3 --enable-x11grab --enable-shared --enable-pic
-	#./configure --enable-gpl --enable-libfaac --enable-libmp3lame
-	#–-enable-libopencore-amrnb –-enable-libopencore-amrwb --enable-libtheora
-	#--enable-libvorbis --enable-libx264 --enable-libxvid --enable-nonfree
-	#--enable-postproc --enable-version3 --enable-x11grab –-enable-shared –-enable-pic
+	 ./configure --enable-gpl --enable-libx264 --enable-libxvid --enable-nonfree --enable-postproc --enable-version3 --enable-shared --enable-pic
 	make
 	sudo make install
 	cd $pwd
@@ -66,11 +63,11 @@ fi
 
 # Get OpenCV
 if [ ! -d opencv-3.2.0 ]; then
-	#wget -O opencv.zip https://github.com/opencv/opencv/archive/3.2.0.zip
+	wget -O opencv.zip https://github.com/opencv/opencv/archive/3.2.0.zip
 	unzip opencv.zip
 
 	# Get OpenCV Contrib
-	#wget -O opencv_contrib.zip https://github.com/opencv/opencv_contrib/archive/3.2.0.zip 
+	wget -O opencv_contrib.zip https://github.com/opencv/opencv_contrib/archive/3.2.0.zip 
 	unzip opencv_contrib.zip
 fi
 
@@ -79,14 +76,26 @@ cd opencv-3.2.0/
 mkdir build
 cd build
 cmake -D CMAKE_BUILD_TYPE=RELEASE \
-    -D CMAKE_INSTALL_PREFIX=/usr/local \
-    -D INSTALL_PYTHON_EXAMPLES=ON \
-    -D INSTALL_C_EXAMPLES=OFF \
-    -D OPENCV_EXTRA_MODULES_PATH=$pwd/opencv_contrib-3.2.0/modules \
-    -D PYTHON_EXECUTABLE=$HOME/miniconda3/envs/py3/bin/python \
-    -D BUILD_EXAMPLES=ON -DBUILD_SHARED_LIBS=ON -DBUILD_STATIC_LIBS=ON ..
+      -D CMAKE_INSTALL_PREFIX=/usr/local \
+      -D INSTALL_PYTHON_EXAMPLES=ON \
+      -D INSTALL_C_EXAMPLES=OFF \
+      -D OPENCV_EXTRA_MODULES_PATH=$pwd/opencv_contrib-3.2.0/modules \
+      -D PYTHON_EXECUTABLE=$HOME/miniconda3/envs/py3/bin/python \
+      -D BUILD_EXAMPLES=ON \
+      -D BUILD_JPEG=ON \
+      -D ENABLE_VFPV3=ON \
+      -D ENABLE_NEON=ON \
+      -D BUILD_NEW_PYTHON_SUPPORT=ON \
+      -D BUILD_SHARED_LIBS=ON \
+      -D BUILD_STATIC_LIBS=ON \
+      ..
 make -j4
 sudo make install
 
-#cmake -D CMAKE_BUILD_TYPE=RELEASE -D CMAKE_INSTALL_PREFIX=/usr/local -D WITH_CUBLAS=ON -D WITH_CUFFT=ON -D WITH_EIGEN=ON -D WITH_OPENGL=ON -D WITH_QT=OFF -D WITH_TBB=ON -D BUILD_SHARED_LIBS=ON -D BUILD_DOCS=ON -D BUILD_EXAMPLES=ON -D BUILD_TESTS=ON -D BUILD_JPEG=ON -D ENABLE_VFPV3=ON -D ENABLE_NEON=ON -D BUILD_NEW_PYTHON_SUPPORT=ON -D WITH_V4L=ON-D INSTALL_C_EXAMPLES=ON -D INSTALL_PYTHON_EXAMPLES=ON  -D WITH_VTK=ON ..
+
+
+# -D WITH_CUBLAS=ON -D WITH_CUFFT=ON 
+# -D WITH_EIGEN=ON -D WITH_OPENGL=ON 
+# -D WITH_QT=OFF -D WITH_TBB=ON 
+# -D BUILD_DOCS=ON BUILD_TESTS=ON 
 
