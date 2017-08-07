@@ -2,6 +2,7 @@
 
 echo ""
 echo "Installing OpenCV."
+pwd=`pwd`
 
 # Create swapfile
 if [ ! -f /swapfile ]; then
@@ -12,6 +13,7 @@ if [ ! -f /swapfile ]; then
 fi
 
 # Install requirements for OpenCV
+sudo apt-get install -y unzip
 sudo apt-get install -y libjpeg-dev libtiff5-dev libjasper-dev libpng12-dev
 sudo apt-get install -y libavcodec-dev libavformat-dev libswscale-dev libv4l-dev
 sudo apt-get install -y libxvidcore-dev libx264-dev
@@ -20,15 +22,15 @@ sudo apt-get install -y libatlas-base-dev gfortran
 sudo apt-get install -y python2.7-dev python3-dev
 
 # Install Miniconda
-if ! which conda >/dev/null; then
-	wget -O miniconda.sh http://repo.continuum.io/miniconda/Miniconda3-latest-Linux-armv7l.sh 
+if [ ! -x conda ]; then
+	#wget -O miniconda.sh http://repo.continuum.io/miniconda/Miniconda3-latest-Linux-armv7l.sh 
 	chmod +x miniconda.sh
 	bash miniconda.sh -b -p $HOME/miniconda
 	export PATH="$HOME/miniconda/bin:$PATH"
 
 	# Create py3 env
 	conda update conda
-	conda create --name py3 python=3
+	conda create -y --name py3 python=3
 fi
 
 # Activate
@@ -38,14 +40,14 @@ source activate py3
 pip install numpy
 
 # x264
-if [ ! -d x264 ]; then
-	wget ftp://ftp.videolan.org/pub/videolan/x264/snapshots/last_stable_x264.tar.bz2 -O x264.tar.bz2
-	bzip2 -d x264.tar.bz2
-	cd last_stable_x264
+if [ ! -d ONx264-snapshot-20170806-2245-stable ]; then
+	#wget ftp://ftp.videolan.org/pub/videolan/x264/snapshots/last_stable_x264.tar.bz2 -O x264.tar.bz2
+	tar xvfj x264.tar.bz2
+	cd x264-snapshot-20170806-2245-stable
 	./configure --enable-shared --enable-pic
 	make
 	sudo make install
-	cd ..
+	cd $pwd
 fi
 
 # FFMpeg
@@ -59,16 +61,16 @@ if [ ! -d ffmpeg ]; then
 	#--enable-postproc --enable-version3 --enable-x11grab –-enable-shared –-enable-pic
 	make
 	sudo make install
-	cd ..
+	cd $pwd
 fi
 
 # Get OpenCV
 if [ ! -d opencv-3.2.0 ]; then
-	wget -O opencv.zip https://github.com/opencv/opencv/archive/3.2.0.zip
+	#wget -O opencv.zip https://github.com/opencv/opencv/archive/3.2.0.zip
 	unzip opencv.zip
 
 	# Get OpenCV Contrib
-	wget -O opencv_contrib.zip https://github.com/opencv/opencv_contrib/archive/3.2.0.zip 
+	#wget -O opencv_contrib.zip https://github.com/opencv/opencv_contrib/archive/3.2.0.zip 
 	unzip opencv_contrib.zip
 fi
 
