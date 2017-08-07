@@ -1,0 +1,90 @@
+#!/bin/bash
+
+echo ""
+echo "Installing OpenCV."
+
+# Create swapfile
+if [ ! -f /swapfile ]; then
+	sudo dd if=/dev/zero of=/swapfile bs=512M count=1
+	sudo chmod 600 /swapfile
+	sudo mkswap /swapfile
+	sudo swapon /swapfile
+fi
+
+# Install requirements for OpenCV
+sudo apt-get install -y libjpeg-dev libtiff5-dev libjasper-dev libpng12-dev
+sudo apt-get install -y libavcodec-dev libavformat-dev libswscale-dev libv4l-dev
+sudo apt-get install -y libxvidcore-dev libx264-dev
+sudo apt-get install -y libgtk2.0-dev
+sudo apt-get install -y libatlas-base-dev gfortran
+sudo apt-get install -y python2.7-dev python3-dev
+
+# Install Miniconda
+if ! which conda >/dev/null; then
+	wget -O miniconda.sh http://repo.continuum.io/miniconda/Miniconda3-latest-Linux-armv7l.sh 
+	chmod +x miniconda.sh
+	bash miniconda.sh -b -p $HOME/miniconda
+	export PATH="$HOME/miniconda/bin:$PATH"
+
+	# Create py3 env
+	conda update conda
+	conda create --name py3 python=3
+fi
+
+# Activate
+source activate py3
+
+# Install numpy in py3
+pip install numpy
+
+# x264
+if [ ! -d x264 ]; then
+	wget ftp://ftp.videolan.org/pub/videolan/x264/snapshots/last_stable_x264.tar.bz2 -O x264.tar.bz2
+	bzip2 -d x264.tar.bz2
+	cd last_stable_x264
+	./configure --enable-shared --enable-pic
+	make
+	sudo make install
+	cd ..
+fi
+
+# FFMpeg
+if [ ! -d ffmpeg ]; then
+	git clone https://git.ffmpeg.org/ffmpeg.git ffmpeg
+	cd ffmpeg
+	./configure --enable-gpl --enable-libfaac --enable-libmp3lame --enable-libopencore-amrnb --enable-libopencore-amrwb --enable-libtheora --enable-libvorbis --enable-libx264 --enable-libxvid --enable-nonfree --enable-postproc --enable-version3 --enable-x11grab --enable-shared --enable-pic
+	#./configure --enable-gpl --enable-libfaac --enable-libmp3lame
+	#–-enable-libopencore-amrnb –-enable-libopencore-amrwb --enable-libtheora
+	#--enable-libvorbis --enable-libx264 --enable-libxvid --enable-nonfree
+	#--enable-postproc --enable-version3 --enable-x11grab –-enable-shared –-enable-pic
+	make
+	sudo make install
+	cd ..
+fi
+
+# Get OpenCV
+if [ ! -d opencv-3.2.0 ]; then
+	wget -O opencv.zip https://github.com/opencv/opencv/archive/3.2.0.zip
+	unzip opencv.zip
+
+	# Get OpenCV Contrib
+	wget -O opencv_contrib.zip https://github.com/opencv/opencv_contrib/archive/3.2.0.zip 
+	unzip opencv_contrib.zip
+fi
+
+# Build OpenCV
+cd opencv-3.2.0/
+mkdir build
+cd build
+cmake -D CMAKE_BUILD_TYPE=RELEASE \
+    -D CMAKE_INSTALL_PREFIX=/usr/local \
+    -D INSTALL_PYTHON_EXAMPLES=ON \
+    -D INSTALL_C_EXAMPLES=OFF \
+    -D OPENCV_EXTRA_MODULES_PATH=~/rover/install/opencv_contrib-3.2.0/modules \
+    -D PYTHON_EXECUTABLE=/home/pi/miniconda3/envs/py3/bin/python \
+    -D BUILD_EXAMPLES=ON -DBUILD_SHARED_LIBS=ON -DBUILD_STATIC_LIBS=ON ..
+make -j4
+sudo make install
+
+#cmake -D CMAKE_BUILD_TYPE=RELEASE -D CMAKE_INSTALL_PREFIX=/usr/local -D WITH_CUBLAS=ON -D WITH_CUFFT=ON -D WITH_EIGEN=ON -D WITH_OPENGL=ON -D WITH_QT=OFF -D WITH_TBB=ON -D BUILD_SHARED_LIBS=ON -D BUILD_DOCS=ON -D BUILD_EXAMPLES=ON -D BUILD_TESTS=ON -D BUILD_JPEG=ON -D ENABLE_VFPV3=ON -D ENABLE_NEON=ON -D BUILD_NEW_PYTHON_SUPPORT=ON -D WITH_V4L=ON-D INSTALL_C_EXAMPLES=ON -D INSTALL_PYTHON_EXAMPLES=ON  -D WITH_VTK=ON ..
+
