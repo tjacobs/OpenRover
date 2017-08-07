@@ -1,0 +1,7 @@
+#!/bin/bash
+
+df -h
+
+cd $1
+du -sm * 2> /dev/null | sort -rn 
+
