@@ -40,12 +40,12 @@ source activate py3
 pip install numpy
 
 # x264
-if [ ! -d ONx264-snapshot-20170806-2245-stable ]; then
+if [ ! -d x264-snapshot-20170806-2245-stable ]; then
 	#wget ftp://ftp.videolan.org/pub/videolan/x264/snapshots/last_stable_x264.tar.bz2 -O x264.tar.bz2
 	tar xvfj x264.tar.bz2
 	cd x264-snapshot-20170806-2245-stable
 	./configure --enable-shared --enable-pic
-	make
+	#make
 	sudo make install
 	cd $pwd
 fi
@@ -82,8 +82,8 @@ cmake -D CMAKE_BUILD_TYPE=RELEASE \
     -D CMAKE_INSTALL_PREFIX=/usr/local \
     -D INSTALL_PYTHON_EXAMPLES=ON \
     -D INSTALL_C_EXAMPLES=OFF \
-    -D OPENCV_EXTRA_MODULES_PATH=~/rover/install/opencv_contrib-3.2.0/modules \
-    -D PYTHON_EXECUTABLE=/home/pi/miniconda3/envs/py3/bin/python \
+    -D OPENCV_EXTRA_MODULES_PATH=$pwd/opencv_contrib-3.2.0/modules \
+    -D PYTHON_EXECUTABLE=$HOME/miniconda3/envs/py3/bin/python \
     -D BUILD_EXAMPLES=ON -DBUILD_SHARED_LIBS=ON -DBUILD_STATIC_LIBS=ON ..
 make -j4
 sudo make install
