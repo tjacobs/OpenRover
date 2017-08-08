@@ -21,26 +21,31 @@ sudo apt-get install -y libgtk2.0-dev
 sudo apt-get install -y libatlas-base-dev gfortran
 sudo apt-get install -y python2.7-dev python3-dev
 
-# Install Miniconda
-if [ ! -f miniconda.sh ]; then
-	wget -O miniconda.sh http://repo.continuum.io/miniconda/Miniconda3-latest-Linux-armv7l.sh 
-	chmod +x miniconda.sh
-	bash miniconda.sh -b -p $HOME/miniconda
-	export PATH="$HOME/miniconda/bin:$PATH"
+# Install virtualenv
+sudo pip3 install virtualenv virtualenvwrapper
 
-	# Create py3 env
-	conda update conda
-	conda create -y --name py3 python=3
-fi
+# Add virtualenv
+echo 'export VIRTUALENVWRAPPER_PYTHON=/usr/bin/python3' >> ~/.bashrc
+echo 'export WORKON_HOME=$HOME/.virtualenv' >> ~/.bashrc
+echo 'export source /usr/local/bin/virtualenvwrapper.sh' >> ~/.bashrc
 
-# Activate
-source activate py3
+# Run virtualenv
+source ~/.bashrc
+mkvirtualenv py3
 
 # Install numpy in py3
 sudo pip install --upgrade pip
 pip install numpy
 
-# x264
+# Get OpenCV
+if [ ! -d opencv-3.0.0 ]; then
+	wget -O opencv.zip https://github.com/opencv/opencv/archive/3.0.0.zip
+	unzip opencv.zip
+	wget -O opencv_contrib.zip https://github.com/opencv/opencv_contrib/archive/3.0.0.zip
+	unzip opencv_contrib
+fi
+
+# Get x264
 if [ ! -d x264-snapshot-20170806-2245-stable ]; then
 	wget ftp://ftp.videolan.org/pub/videolan/x264/snapshots/last_stable_x264.tar.bz2 -O x264.tar.bz2
 	tar xvfj x264.tar.bz2
@@ -61,37 +66,34 @@ if [ ! -d ffmpeg ]; then
 	cd $pwd
 fi
 
-# Get OpenCV
-if [ ! -d opencv-3.2.0 ]; then
-	wget -O opencv.zip https://github.com/opencv/opencv/archive/3.2.0.zip
-	unzip opencv.zip
-
-	# Get OpenCV Contrib
-	wget -O opencv_contrib.zip https://github.com/opencv/opencv_contrib/archive/3.2.0.zip 
-	unzip opencv_contrib.zip
-fi
-
 # Build OpenCV
-cd opencv-3.2.0/
+cd opencv-3.0.0/
 mkdir build
 cd build
-cmake -D CMAKE_BUILD_TYPE=RELEASE \
-      -D CMAKE_INSTALL_PREFIX=/usr/local \
-      -D INSTALL_PYTHON_EXAMPLES=ON \
-      -D INSTALL_C_EXAMPLES=OFF \
-      -D OPENCV_EXTRA_MODULES_PATH=$pwd/opencv_contrib-3.2.0/modules \
-      -D PYTHON_EXECUTABLE=$HOME/miniconda3/envs/py3/bin/python \
-      -D BUILD_EXAMPLES=ON \
-      -D BUILD_JPEG=ON \
-      -D ENABLE_VFPV3=ON \
-      -D ENABLE_NEON=ON \
-      -D BUILD_NEW_PYTHON_SUPPORT=ON \
-      -D BUILD_SHARED_LIBS=ON \
-      -D BUILD_STATIC_LIBS=ON \
-      ..
+cmake 	-D CMAKE_BUILD_TYPE=RELEASE \
+	-D CMAKE_INSTALL_PREFIX=/usr/local \
+	-D INSTALL_C_EXAMPLES=ON \
+	-D INSTALL_PYTHON_EXAMPLES=ON \
+	-D OPENCV_EXTRA_MODULES_PATH=$pwd/opencv_contrib-3.0.0/modules \
+	-D BUILD_EXAMPLES=ON \
+	..
+#cmake -D CMAKE_BUILD_TYPE=RELEASE \
+#      -D CMAKE_INSTALL_PREFIX=/usr/local \
+#      -D INSTALL_PYTHON_EXAMPLES=ON \
+#      -D INSTALL_C_EXAMPLES=OFF \
+#      -D OPENCV_EXTRA_MODULES_PATH=$pwd/opencv_contrib-3.2.0/modules \
+#      -D PYTHON_EXECUTABLE=$HOME/miniconda3/envs/py3/bin/python \
+#      -D BUILD_EXAMPLES=ON \
+#      -D BUILD_JPEG=ON \
+#      -D ENABLE_VFPV3=ON \
+#      -D ENABLE_NEON=ON \
+#      -D BUILD_NEW_PYTHON_SUPPORT=ON \
+#      -D BUILD_SHARED_LIBS=ON \
+#      -D BUILD_STATIC_LIBS=ON \
+#      ..
 make -j4
 sudo make install
-
+sudo ldconfig
 
 
 # -D WITH_CUBLAS=ON -D WITH_CUFFT=ON 
