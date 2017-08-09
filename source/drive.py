@@ -49,7 +49,7 @@ cv2.moveWindow( "preview", 10, 10 )
 #camera.startCamera( (320, 160) )
 
 # Open a sample image
-frame = mpimg.imread('test_images/straight_lines1.jpg') 
+frame = mpimg.imread('test_images/test1.jpg') 
 
 # Loop
 frames_per_second = 0

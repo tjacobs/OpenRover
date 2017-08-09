@@ -334,10 +334,10 @@ def pipeline( image ):
     # Define source, dest and matricies for perspective stretch and stretch back
     if M is None:
         src = np.float32(
-            [[image.shape[1]/2-150, 0], 
-            [image.shape[1]/2+150, 0],
-            [0, image.shape[0]],
-            [image.shape[1], image.shape[0]]])
+            [[image.shape[1] * 0.2, 0], 
+            [image.shape[1] * 0.8, 0],
+            [-100, image.shape[0]],
+            [100+image.shape[1], image.shape[0]]])
         dest = np.float32(
             [[0, 0],
              [image.shape[1], 0],
