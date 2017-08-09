@@ -1,0 +1,17 @@
+#!/bin/bash
+
+echo ""
+echo "Formatting SD card."
+
+# Show devices
+ls /dev/m*
+
+# Create filesystem
+echo "t 83 w y"
+sudo fdisk /dev/mmcblk0
+sudo mkfs -t ext4 /dev/mmcblk0p1
+
+# Mount
+sudo mkdir /sd
+sudo mount /dev/mmcblk0p1 /sd
+
