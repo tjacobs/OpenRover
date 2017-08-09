@@ -4,42 +4,36 @@ try:
 	import vision
 except:
 	print("No OpenCV installed.")
-
 from PIL import Image   
-#import matplotlib.pyplot as plt
-#import matplotlib.image as mpimg
 import time
 import motors
+import matplotlib.image as mpimg
 
 # Test motors
-while True:
+while False:
     speed = 0.0
     steering = 0.6
-    motors.setMotor(1, speed)
-    motors.setMotor(2, steering)
+    motors.setPWM(1, speed)
+    motors.setPWM(2, steering)
     time.sleep(1)
 	
     speed = 0.0
     steering = -0.6
-    motors.setMotor(1, speed)
-    motors.setMotor(2, steering)
+    motors.setPWM(1, speed)
+    motors.setPWM(2, steering)
     time.sleep(1)
 
     speed = 0.6
     steering = 0.0
-    motors.setMotor(1, speed)
-    motors.setMotor(2, steering)
+    motors.setPWM(1, speed)
+    motors.setPWM(2, steering)
     time.sleep(0.5)
         
     speed = 0.0
     steering = 0.0
-    motors.setMotor(1, speed)
-    motors.setMotor(2, steering)
+    motors.setPWM(1, speed)
+    motors.setPWM(2, steering)
     time.sleep(5)
-
-# Test vision
-#vision.test_pipeline()
-#exit()
 
 # Frame processing steps
 def process(image):
@@ -48,11 +42,11 @@ def process(image):
     return image
 
 # Create window
-#cv2.namedWindow( "preview" )
-#cv2.moveWindow( "preview", 10, 10 )
+cv2.namedWindow( "preview" )
+cv2.moveWindow( "preview", 10, 10 )
 
 # Start camera
-camera.startCamera( (320, 160) )
+#camera.startCamera( (320, 160) )
 
 # Open a sample image
 frame = mpimg.imread('test_images/straight_lines1.jpg') 
@@ -66,19 +60,19 @@ while True:
 #    frame = camera.getFrame()
 
     # De-blue
-#    frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
+    frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
 
     # Run through our machine vision pipeline
-#    frame = vision.pipeline(frame)
+    frame = vision.pipeline(frame)
 
     # Post process
     processed_frame = process(frame)
 
     # Move
-    #speed = 0.1
-    #steering = 0
-    #motors.setMotor(1, speed)
-    #motors.setMotor(2, steering)
+    speed = 0.1
+    steering = 0
+    #motors.setPWM(1, speed)
+    #motors.setPWM(2, steering)
 
     # Save
 #    mpimg.imsave('out.png', processed_frame) 

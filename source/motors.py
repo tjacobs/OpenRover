@@ -1,20 +1,22 @@
 import time
 try:
-	import rcpy.motor as motor
-	from rcpy.motor import motor1
-	from rcpy.motor import motor2
+	import rcpy.servo as servo
+	from rcpy.servo import servo1
+	from rcpy.servo import servo2
 except:
 	print("Error: No rcpy found.")
-	exit()
 	pass
 
-def initMotors():
-	pass	
+# Takes a value from -1 to 1, where 0 is center
+def setPWM(number, value):
+	duty = (value+1) * 500 + 1000
+	if number == 1:
+		servo1.set(duty)
+	elif number == 2:
+		servo2.set(duty)
 
-# Takes a speed from -1 to 1
-def setMotor(motor, speed):
-	if motor == 1:
-		motor1.set(speed)
-	elif motor == 2:
-		motor2.set(speed)
-
+def runPWM(number):
+	if number == 1:
+		servo1.run()
+	elif number == 2:
+		servo2.run()

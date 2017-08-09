@@ -1,7 +1,7 @@
 import cv2
 import numpy as np
-import matplotlib.pyplot as plt
-import matplotlib.image as mpimg
+#import matplotlib.pyplot as plt
+#import matplotlib.image as mpimg
 from PIL import Image   
 import time
 import glob
@@ -114,7 +114,7 @@ def find_lanes(processed_image):
     right_line_pts = np.hstack((right_line_window1, right_line_window2))
 
     # Create an output image to draw on and visualize the result. Colouring time. Colour the lanes.
-    if windows_image != None:
+    if windows_image is not None:
         lanes_image = np.dstack((processed_image, windows_image, processed_image))*255
         lanes_image[nonzeroy[left_lane_inds], nonzerox[left_lane_inds]] = [255, 0, 0]
         lanes_image[nonzeroy[right_lane_inds], nonzerox[right_lane_inds]] = [0, 0, 255]
@@ -332,7 +332,7 @@ def pipeline( image ):
     global M, Minv
 
     # Define source, dest and matricies for perspective stretch and stretch back
-    if M == None:
+    if M is None:
         src = np.float32(
             [[image.shape[1]/2-150, 0], 
             [image.shape[1]/2+150, 0],
@@ -404,7 +404,9 @@ def create_video( input_video, output_video ):
 
 # Test vision pipeline on a stored image and video
 def test_pipeline():    
-    # Open a sample image
+    import matplotlib.image as mpimg
+   
+     # Open a sample image
     image = mpimg.imread('test_images/straight_lines1.jpg') 
 
     # Run our vision image processing pipeline
