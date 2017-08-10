@@ -20,11 +20,11 @@ import motors
 print( "Calibrating ESC." )
 motors.setPWM(1, 1.0)
 motors.startPWM(1, 0.01)
-time.sleep(3)
+time.sleep(2)
 motors.setPWM(1, 0.0)
-time.sleep(3)
+time.sleep(2)
 motors.setPWM(1, 0.5)
-time.sleep(3)
+time.sleep(2)
 
 # Frame processing steps
 def process(image):
@@ -59,10 +59,13 @@ while True:
 #    processed_frame = process(frame)
 
     # Move
-    motors.setPWM(1, math.sin(i)/10 + 0.5)
+    if int(i) % 10 == 0:
+        motors.setPWM(1, 0.6)
+    else:
+        motors.setPWM(1, 0.5)
     motors.setPWM(2, math.sin(i)/2 + 0.25)
     motors.runPWM(2)
-    i += 0.01
+    i += 0.02
 
     # Save
 #    mpimg.imsave('out.png', processed_frame) 
@@ -83,7 +86,7 @@ while True:
     #key = cv2.waitKey(20)
     #if key == 27:
     #    break
-    time.sleep(0.02)
+    time.sleep(0.01)
 
 # Close
 #cv2.destroyWindow( "preview" )
