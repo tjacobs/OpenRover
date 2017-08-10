@@ -4,35 +4,43 @@ try:
 	import vision
 except:
 	print("No OpenCV installed.")
-from PIL import Image   
+#from PIL import Image   
 import time
 import motors
-import matplotlib.image as mpimg
+#import matplotlib.image as mpimg
 
 # Test motors
-while False:
-    speed = 0.0
-    steering = 0.6
+motors.setPWM(1, -0.1)
+motors.setPWM(2, 0)
+motors.startPWM(1, -0.1)
+while True:
+    print( "Run" )
+    speed = -0.1
+    steering = 0.9
     motors.setPWM(1, speed)
     motors.setPWM(2, steering)
+    motors.runPWM(2)
     time.sleep(1)
 	
     speed = 0.0
-    steering = -0.6
+    steering = -0.9
     motors.setPWM(1, speed)
     motors.setPWM(2, steering)
+    motors.runPWM(2)
     time.sleep(1)
 
-    speed = 0.6
+    speed = 0.2
     steering = 0.0
     motors.setPWM(1, speed)
     motors.setPWM(2, steering)
+    motors.runPWM(2)
     time.sleep(0.5)
         
     speed = 0.0
     steering = 0.0
     motors.setPWM(1, speed)
     motors.setPWM(2, steering)
+    motors.runPWM(2)
     time.sleep(5)
 
 # Frame processing steps
@@ -98,6 +106,7 @@ while True:
 
 # Close
 cv2.destroyWindow( "preview" )
-camera.stopCamera( )
+camera.stopCamera()
+motors.servosOff()
 
 
