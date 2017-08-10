@@ -4,44 +4,27 @@ try:
 	import vision
 except:
 	print("No OpenCV installed.")
-#from PIL import Image   
+try:
+	from PIL import Image   
+except:
+	print("No Pillow installed.")
+try:
+	import matplotlib.image as mpimg
+except:
+	print("No Matplotlib installed.")
 import time
+import math
 import motors
-#import matplotlib.image as mpimg
 
-# Test motors
-motors.setPWM(1, -0.1)
-motors.setPWM(2, 0)
-motors.startPWM(1, -0.1)
-while True:
-    print( "Run" )
-    speed = -0.1
-    steering = 0.9
-    motors.setPWM(1, speed)
-    motors.setPWM(2, steering)
-    motors.runPWM(2)
-    time.sleep(1)
-	
-    speed = 0.0
-    steering = -0.9
-    motors.setPWM(1, speed)
-    motors.setPWM(2, steering)
-    motors.runPWM(2)
-    time.sleep(1)
-
-    speed = 0.2
-    steering = 0.0
-    motors.setPWM(1, speed)
-    motors.setPWM(2, steering)
-    motors.runPWM(2)
-    time.sleep(0.5)
-        
-    speed = 0.0
-    steering = 0.0
-    motors.setPWM(1, speed)
-    motors.setPWM(2, steering)
-    motors.runPWM(2)
-    time.sleep(5)
+# Calibrate ESC
+print( "Calibrating ESC." )
+motors.setPWM(1, 1.0)
+motors.startPWM(1, 0.01)
+time.sleep(3)
+motors.setPWM(1, 0.0)
+time.sleep(3)
+motors.setPWM(1, 0.5)
+time.sleep(3)
 
 # Frame processing steps
 def process(image):
@@ -50,16 +33,18 @@ def process(image):
     return image
 
 # Create window
-cv2.namedWindow( "preview" )
-cv2.moveWindow( "preview", 10, 10 )
+#cv2.namedWindow( "preview" )
+#cv2.moveWindow( "preview", 10, 10 )
 
 # Start camera
 #camera.startCamera( (320, 160) )
 
 # Open a sample image
-frame = mpimg.imread('test_images/test1.jpg') 
+#frame = mpimg.imread('test_images/test1.jpg') 
+#frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
 
 # Loop
+i = 0.0
 frames_per_second = 0
 time_start = time.time()
 while True:
@@ -67,25 +52,20 @@ while True:
     # Get a frame
 #    frame = camera.getFrame()
 
-    # De-blue
-    frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
-
     # Run through our machine vision pipeline
-    frame = vision.pipeline(frame)
+#    frame = vision.pipeline(frame)
 
     # Post process
-    processed_frame = process(frame)
+#    processed_frame = process(frame)
 
     # Move
-    speed = 0.1
-    steering = 0
-    #motors.setPWM(1, speed)
-    #motors.setPWM(2, steering)
+    motors.setPWM(1, math.sin(i)/10 + 0.5)
+    motors.setPWM(2, math.sin(i)/2 + 0.25)
+    motors.runPWM(2)
+    i += 0.01
 
     # Save
 #    mpimg.imsave('out.png', processed_frame) 
-
-    # Open it to see
 #    img = Image.open('out.png')
 #    img.show() 
 
@@ -97,16 +77,17 @@ while True:
         time_start = time.time()
 
     # Show
-    cv2.imshow( "preview", processed_frame )
+#    cv2.imshow( "preview", processed_frame )
 
     # Esc key hit?
-    key = cv2.waitKey(20)
-    if key == 27:
-        break
+    #key = cv2.waitKey(20)
+    #if key == 27:
+    #    break
+    time.sleep(0.02)
 
 # Close
-cv2.destroyWindow( "preview" )
-camera.stopCamera()
+#cv2.destroyWindow( "preview" )
+#camera.stopCamera()
 motors.servosOff()
 
 
