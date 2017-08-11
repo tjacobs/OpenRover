@@ -4,6 +4,9 @@ echo ""
 echo "Installing OpenCV."
 pwd=`pwd`
 
+lscpu
+cat /proc/cpuinfo 
+
 # Create swapfile
 if [ ! -f /swapfile ]; then
 	sudo dd if=/dev/zero of=/swapfile bs=512M count=1
@@ -57,7 +60,7 @@ if [ ! -d x264-snapshot-20170806-2245-stable ]; then
 fi
 
 # FFMpeg
-if [ ! -d ffmpeg ]; then
+if [ -d ffmpeg ]; then
 	git clone https://git.ffmpeg.org/ffmpeg.git ffmpeg
 	cd ffmpeg
 	 ./configure --enable-gpl --enable-libx264 --enable-libxvid --enable-nonfree --enable-postproc --enable-version3 --enable-shared --enable-pic
@@ -72,37 +75,43 @@ mkdir build
 cd build
 cmake 	-D CMAKE_BUILD_TYPE=RELEASE \
 	-D CMAKE_INSTALL_PREFIX=/usr/local \
-	-D INSTALL_C_EXAMPLES=ON \
-	-D INSTALL_PYTHON_EXAMPLES=ON \
+	-D BUILD_EXAMPLES=OFF \
+	-D INSTALL_C_EXAMPLES=OFF \
+	-D INSTALL_PYTHON_EXAMPLES=OFF \
+	-D ENABLE_NEON=ON \
+	-D ENABLE_VFPV3=ON \
+	-D WITH_CUBLAS=ON \
+	-D WITH_CUFFT=ON \
+	-D BUILD_NEW_PYTHON_SUPPORT=ON \
 	-D OPENCV_EXTRA_MODULES_PATH=$pwd/opencv_contrib-3.0.0/modules \
-	-D BUILD_EXAMPLES=ON \
 	..
-
-#      -D ENABLE_NEON=ON \
 
 # Some more build flags to try:
 #      -D PYTHON_EXECUTABLE=/usr/bin/python \
 #      -D BUILD_JPEG=ON \
-#      -D ENABLE_VFPV3=ON \
-#      -D BUILD_NEW_PYTHON_SUPPORT=ON \
 #      -D BUILD_SHARED_LIBS=ON \
 #      -D BUILD_STATIC_LIBS=ON \
-#      -D WITH_CUBLAS=ON -D WITH_CUFFT=ON 
 #      -D WITH_EIGEN=ON -D WITH_OPENGL=ON 
 #      -D WITH_QT=OFF -D WITH_TBB=ON 
 #      -D BUILD_DOCS=ON BUILD_TESTS=ON 
 
 # Build
-make -j4
+if [ uname -a | grep beaglebone ]; then
+	make 
+else
+	make -j8
+fi
 sudo make install
 sudo ldconfig
 
 # Copy object into py3 env
-cd ~/.virtualenv/py3/lib/python3.5/site-packages
-ln -s /usr/local/lib/python3.5/dist-packages/cv2.cpython-35m-arm-linux-gnueabihf.so cv2.so
-cd $pwd
+if [ uname -a | grep beaglebone]; then
+	ln -s /usr/local/lib/python3.5/dist-packages/cv2.cpython-35m-arm-linux-gnueabihf.so ~/.virtualenv/py3/lib/python3.5/site-packages/cv2.so
+else
+	ln -s /usr/local/lib/python3.4/site-packages/cv2.cpython-34m.so ~/.virtualenv/py3/lib/python3.4/site-packages/cv2.so
+fi
 
 # Done
-python -c "import cv2"
+python3 -c "import cv2"
 echo "It is done."
 
