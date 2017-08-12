@@ -6,6 +6,9 @@ install/opencv.zip
 install/opencv_contrib.zip
 install/opencv-3.0.0/
 install/opencv_contrib-3.0.0/
+install/x264-snapshot-20170806-2245-stable/
 
 install/test/
 source/test/
+source/motors.o
+source/motors

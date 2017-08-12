@@ -1,5 +1,7 @@
 #!/bin/bash
 
+workon py3
 cd source
-sudo python3 drive.py
+sudo /home/debian/.virtualenv/py3/bin/python3 drive.py
+#sudo python3 drive.py
 
