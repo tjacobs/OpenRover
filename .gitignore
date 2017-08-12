@@ -1,15 +1,11 @@
 
 *.pyc
 
-source/out.png
-
-source/output.mp4
-
-source/output.png
-
-install/Miniconda3-latest-Linux-armv7l.sh
-install/opencv-3.2.0/
+install/miniconda.sh
 install/opencv.zip
-install/opencv_contrib-3.2.0/
 install/opencv_contrib.zip
+install/opencv-3.0.0/
+install/opencv_contrib-3.0.0/
 
+install/test/
+source/test/
