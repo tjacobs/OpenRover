@@ -1,6 +1,11 @@
 import time
 import sys
 import cv2
+from threading import Thread
+if sys.version_info >= (3, 0):
+	from queue import Queue
+else:
+	from Queue import Queue
 
 # Try some Picamera
 try:
@@ -13,9 +18,30 @@ except:
 rawCapture = None
 picamera = None
 cap = None
+Q = None
+
+def read():
+	# return next frame in the queue
+	global Q
+	return Q.get()
+
+def update():
+	global Q, cap
+	while True:
+		# Otherwise, ensure the queue has room in it
+		if not Q.full():
+			# Read the next frame from the file
+			(grabbed, frame) = cap.read()
+ 
+			if not grabbed:
+				return
+ 
+			# Add the frame to the queue
+			Q.put(frame)
 
 def startCamera( resolution=(160, 128) ):
-	global rawCapture, picamera, cap
+	global rawCapture, picamera, cap, Q
+
 	try:
 		picamera = PiCamera()
 		picamera.resolution = resolution
@@ -34,6 +60,12 @@ def startCamera( resolution=(160, 128) ):
 
 		except:
 			print("Error starting cam")
+
+	# Start thread
+	Q = Queue(maxsize=128)
+	t = Thread(target=update, args=())
+	t.daemon = True
+	t.start()
 
 def stopCamera():
 	global cap

@@ -21,11 +21,11 @@ import sys
 print( "Calibrating ESC." )
 motors.setPWM(1, 1.0)
 motors.startPWM(1, 0.01)
-time.sleep(.2)
+time.sleep(.5)
 motors.setPWM(1, 0.0)
-time.sleep(.2)
+time.sleep(.5)
 motors.setPWM(1, 0.5)
-time.sleep(.2)
+time.sleep(.5)
 
 def display(string):
     sys.stdout.write("\r\x1b[K" + string)
@@ -34,7 +34,7 @@ def display(string):
 # Frame processing steps
 def process(image):
     # Just put text over it
-    cv2.putText(image, "Rover", (10, 50), cv2.FONT_HERSHEY_SIMPLEX, 1.0, (255, 255, 255))
+    cv2.putText(image, "OpenRover", (10, 50), cv2.FONT_HERSHEY_SIMPLEX, 0.4, (155, 155, 255))
     return image
 
 # Create window
@@ -46,8 +46,8 @@ camera.startCamera( (320, 240) )
 
 # Open a sample image
 frame = mpimg.imread('test_images/test1.jpg') 
-#frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
-#frame = cv2.imread('test_images/test1.jpg')
+frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB) 
+#frame = cv2.imread('test_images/test1.jpg') # Use OpenCV instead if matplotlib is giving you trouble
 
 # Loop
 i = 0.0
@@ -56,17 +56,17 @@ time_start = time.time()
 while True:
 
     # Get a frame
-    frame = camera.getFrame()
+    frame = camera.read() #getFrame()
 
     # Run through our machine vision pipeline
-#    frame = vision.pipeline(frame)
+    frame = vision.pipeline(frame)
 
     # Post process
-    processed_frame = process(frame)
+    #processed_frame = process(frame)
 
     # Move
     if int(i) % 10 == 0:
-        print( "Jump" )
+        display("Jump forward!")
         motors.setPWM(1, 0.56)
     else:
         motors.setPWM(1, 0.5)
@@ -74,8 +74,8 @@ while True:
     motors.runPWM(2)
     i += 0.20
 
-    # Save
-    mpimg.imsave('out.png', processed_frame) 
+    # Save image to disk to debug
+#    mpimg.imsave('out.png', processed_frame) 
 #    img = Image.open('out.png')
 #    img.show() 
 
@@ -91,9 +91,9 @@ while True:
 #    cv2.imshow( "preview", processed_frame )
 
     # Esc key hit?
-    key = cv2.waitKey(20)
-    if key == 27:
-        break
+    #key = cv2.waitKey(20)
+    #if key == 27:
+    #    break
 
 # Close
 #cv2.destroyWindow( "preview" )

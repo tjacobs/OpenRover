@@ -353,6 +353,8 @@ def pipeline( image ):
 
         M = cv2.getPerspectiveTransform(src, dest)
         Minv = cv2.getPerspectiveTransform(dest, src)
+ 
+    return image
     
     # Threshold image to make the line edges stand out
     thresholded_image, s, _, _, _, _ = threshold(image)
