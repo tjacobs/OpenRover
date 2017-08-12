@@ -15,16 +15,21 @@ except:
 import time
 import math
 import motors
+import sys
 
 # Calibrate ESC
 print( "Calibrating ESC." )
 motors.setPWM(1, 1.0)
 motors.startPWM(1, 0.01)
-time.sleep(2)
+time.sleep(.2)
 motors.setPWM(1, 0.0)
-time.sleep(2)
+time.sleep(.2)
 motors.setPWM(1, 0.5)
-time.sleep(2)
+time.sleep(.2)
+
+def display(string):
+    sys.stdout.write("\r\x1b[K" + string)
+    sys.stdout.flush()
 
 # Frame processing steps
 def process(image):
@@ -37,11 +42,12 @@ def process(image):
 #cv2.moveWindow( "preview", 10, 10 )
 
 # Start camera
-#camera.startCamera( (320, 160) )
+camera.startCamera( (320, 240) )
 
 # Open a sample image
-#frame = mpimg.imread('test_images/test1.jpg') 
+frame = mpimg.imread('test_images/test1.jpg') 
 #frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
+#frame = cv2.imread('test_images/test1.jpg')
 
 # Loop
 i = 0.0
@@ -50,32 +56,34 @@ time_start = time.time()
 while True:
 
     # Get a frame
-#    frame = camera.getFrame()
+    frame = camera.getFrame()
 
     # Run through our machine vision pipeline
 #    frame = vision.pipeline(frame)
 
     # Post process
-#    processed_frame = process(frame)
+    processed_frame = process(frame)
 
     # Move
     if int(i) % 10 == 0:
-        motors.setPWM(1, 0.6)
+        print( "Jump" )
+        motors.setPWM(1, 0.56)
     else:
         motors.setPWM(1, 0.5)
-    motors.setPWM(2, math.sin(i)/2 + 0.25)
+    motors.setPWM(2, math.sin(i/100)/2 + 0.25)
     motors.runPWM(2)
-    i += 0.02
+    i += 0.20
 
     # Save
-#    mpimg.imsave('out.png', processed_frame) 
+    mpimg.imsave('out.png', processed_frame) 
 #    img = Image.open('out.png')
 #    img.show() 
 
     # Count frames per second
     frames_per_second += 1
     if( time.time() - time_start > 1.0 ):
-        print( "FPS: %.0f" % frames_per_second)
+        #print( "FPS: %.0f" % frames_per_second)
+        display("FPS: %.0f" % frames_per_second)
         frames_per_second = 0
         time_start = time.time()
 
@@ -83,14 +91,13 @@ while True:
 #    cv2.imshow( "preview", processed_frame )
 
     # Esc key hit?
-    #key = cv2.waitKey(20)
-    #if key == 27:
-    #    break
-    time.sleep(0.01)
+    key = cv2.waitKey(20)
+    if key == 27:
+        break
 
 # Close
 #cv2.destroyWindow( "preview" )
-#camera.stopCamera()
+camera.stopCamera()
 motors.servosOff()
 
 

@@ -1,4 +1,5 @@
 import time
+import sys
 try:
 	import rcpy.servo as servo
 	from rcpy.servo import esc1
@@ -7,15 +8,19 @@ except:
 	print("Error: No rcpy found.")
 	pass
 
+def display(string):
+    sys.stdout.write("\r\x1b[K" + string)
+    sys.stdout.flush()
+
 # Takes a value from -1.5 to 1.5, where 0 is center
 # Speed takes 0.0 to 1.0 throttle, and -0.1 is arm
 def setPWM(number, value):
 	duty = value 
 	if number == 1:
-		print( "Setting speed: " + str(duty) )
+		#display( "Setting speed: " + str(duty) )
 		esc1.set(duty)
 	elif number == 2:
-		print( "Setting steering: " + str(duty) )
+		#display( "Setting steering: " + str(duty) )
 		servo2.set(duty)
 
 def servosOff():

@@ -27,6 +27,11 @@ def startCamera( resolution=(160, 128) ):
 		try:
 			print("Starting webcam capture.")
 			cap = cv2.VideoCapture(0)
+			cap.set(3, 1280)
+			cap.set(4, 1024)
+			#cap.set(15, 0.1)
+			print("Started.")
+
 		except:
 			print("Error starting cam")
 
