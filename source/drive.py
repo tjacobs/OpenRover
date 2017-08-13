@@ -82,8 +82,8 @@ while True:
     # Count frames per second
     frames_per_second += 1
     if( time.time() - time_start > 1.0 ):
-        #print( "FPS: %.0f" % frames_per_second)
-        display("FPS: %.0f" % frames_per_second)
+        print( "FPS: %.0f\n" % frames_per_second)
+        #display("FPS: %.0f" % frames_per_second)
         frames_per_second = 0
         time_start = time.time()
 

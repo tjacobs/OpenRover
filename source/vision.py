@@ -10,9 +10,19 @@ import glob
 M = None
 Minv = None
 
+def timing(f):
+    def wrap(*args):
+        time1 = time.time()
+        ret = f(*args)
+        time2 = time.time()
+        print( '%s %d ms' % (f.__name__, (time2-time1)*1000.0) )
+        return ret
+    return wrap
+
 # -------- Lane finding, drawing, curve fitting functions --------
 
 # Find those lines
+@timing
 def find_lanes(processed_image):
     
     # Create window visualisation image
@@ -160,6 +170,7 @@ def fit_curves( leftx, rightx, ploty ):
     return left_curverad, right_curverad, left_fitx, right_fitx, ploty
 
 # Define function to draw the road
+@timing
 def draw_lanes(image, processed_image, lanes_image, left_fitx, right_fitx, ploty, steering_position, speed):
     # Create an image to draw the lines on
     greyscale_blank_image = np.zeros_like(processed_image).astype(np.uint8)
@@ -178,8 +189,8 @@ def draw_lanes(image, processed_image, lanes_image, left_fitx, right_fitx, ploty
     result = cv2.addWeighted(image, 1, newwarp, 0.3, 0)
     
     # Add lanes
-    newwarp = cv2.warpPerspective(lanes_image, Minv, (image.shape[1], image.shape[0])) 
-    result = cv2.addWeighted(result, 0.8, newwarp, 1, 0)
+    #newwarp = cv2.warpPerspective(lanes_image, Minv, (image.shape[1], image.shape[0])) 
+    #result = cv2.addWeighted(result, 0.8, newwarp, 1, 0)
 
     # Calculate centre offset
     lane_centre = (left_fitx[-1] + right_fitx[-1]) / 2.0
@@ -305,22 +316,24 @@ def hls_select(img, thresh=(0, 255)):
     return binary_output
 
 # Define our mega threshold function
+@timing
 def threshold(image):
     # Apply each of the thresholding functions
     ksize = 3
-    gradx_binary = abs_sobel_thresh(image, orient='x', sobel_kernel=ksize, thresh=(10, 255))
-    grady_binary = abs_sobel_thresh(image, orient='y', sobel_kernel=ksize, thresh=(10, 255))
+    #gradx_binary = abs_sobel_thresh(image, orient='x', sobel_kernel=ksize, thresh=(10, 255))
+    #grady_binary = abs_sobel_thresh(image, orient='y', sobel_kernel=ksize, thresh=(10, 255))
     mag_binary = mag_thresh(image, sobel_kernel=ksize, mag_thresh=(30, 255)) 
-    dir_binary = dir_threshold(image, sobel_kernel=ksize, thresh=(0.9, 1.2))
-    hls_binary = hls_select(image, thresh=(50, 255))
+    #dir_binary = dir_threshold(image, sobel_kernel=ksize, thresh=(0.9, 1.2))
+    #hls_binary = hls_select(image, thresh=(50, 255))
 
     # Stack each channel to view their individual contributions in green and blue respectively
-    stacked_binary = np.dstack(( gradx_binary, gradx_binary, mag_binary ))
+    #stacked_binary = np.dstack(( gradx_binary, gradx_binary, mag_binary ))
 
     # Combine them
-    combined = np.zeros_like(gradx_binary)
-    combined[ ( ((mag_binary == 1) & (dir_binary == 1)) | (hls_binary == 1) ) ] = 1
-    return combined, stacked_binary, gradx_binary, grady_binary, mag_binary, dir_binary
+    #combined = np.zeros_like(gradx_binary)
+    #combined[ ( ((mag_binary == 1) & (dir_binary == 1)) | (hls_binary == 1) ) ] = 1
+    #return combined, stacked_binary, gradx_binary, grady_binary, mag_binary, dir_binary
+    return mag_binary
 
 # -------------- The pipeline --------------
 
@@ -330,6 +343,7 @@ speed = 0
 def pipeline( image ):
     global speed, steering_position
     global M, Minv
+
 
     # Define source, dest and matricies for perspective stretch and stretch back
     if M is None:
@@ -354,14 +368,18 @@ def pipeline( image ):
         M = cv2.getPerspectiveTransform(src, dest)
         Minv = cv2.getPerspectiveTransform(dest, src)
  
-    return image
-    
     # Threshold image to make the line edges stand out
-    thresholded_image, s, _, _, _, _ = threshold(image)
+    #thresholded_image, s, _, _, _, _ = threshold(image)
+    thresholded_image = threshold(image)
 
+    time1 = time.time()
     # Stretch the image out so we have basically a bird's-eye view of the scene in front of us
     processed_image = cv2.warpPerspective(thresholded_image, M, (thresholded_image.shape[1], thresholded_image.shape[0]*2) )
-    
+    time2 = time.time()	
+    print( 'warp %d ms' % ((time2-time1)*1000.0) )
+
+    return image
+
     # Find any lanes
     _, lanes_image, _, _, left_fit, right_fit, ploty = find_lanes(processed_image)
 
@@ -392,8 +410,8 @@ def pipeline( image ):
     speed = max(0, 20 - abs(steering_position)/4)
 
     # Draw those lines
-    image_out = draw_lanes(image, processed_image, lanes_image, left_fitx, right_fitx, ploty, steering_position, speed)
-    return image_out
+    #image_out = draw_lanes(image, processed_image, lanes_image, left_fitx, right_fitx, ploty, steering_position, speed)
+    return image
 
 # Define video function
 def create_video( input_video, output_video ):
