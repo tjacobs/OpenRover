@@ -19,17 +19,137 @@ def timing(f):
         return ret
     return wrap
 
-# -------- Lane finding, drawing, curve fitting functions --------
+# --------- Thresholding functions ----------
 
-# Find those lines
+# Function that thresholds a channel of HLS
 @timing
-def find_lanes(processed_image):
+def hls_select(img, threshold, hls_option):
+    # Convert to HLS color space
+    hls = cv2.cvtColor(img, cv2.COLOR_RGB2HLS)
+    
+    # Apply a threshold to the channel
+    s = hls[:, :, hls_option]
+    binary_output = np.zeros_like(s)
+    binary_output[ (s>threshold[0]) & (s<=threshold[1]) ] = 1
+    
+    # Return a binary image of threshold result
+    return binary_output
+
+# Function that thresholds a channel of YUV
+@timing
+def yuv_select(img, threshold, yuv_option, invert = 1):
+    # Convert to YUV color space
+    yuv = cv2.cvtColor(img, cv2.COLOR_RGB2YUV)
+    
+    # Apply a threshold to the channel
+    u = invert * yuv[:, :, yuv_option]
+    binary_output = np.zeros_like(u)
+    binary_output[ (u>threshold[0]) & (u<=threshold[1]) ] = 1
+    
+    # Return a binary image of threshold result
+    return binary_output
+
+# Function that applies Sobel x and y, then computes the direction of the gradient and applies a threshold.
+def direction_threshold(img, sobel_kernel=3, thresh=(0, np.pi/2)):
+    # Convert to grayscale
+    gray = cv2.cvtColor( img, cv2.COLOR_RGB2GRAY )
+    
+    # Take the gradient in x and y separately
+    grad_x = cv2.Sobel( gray, cv2.CV_64F, 1, 0, ksize=sobel_kernel )
+    grad_y = cv2.Sobel( gray, cv2.CV_64F, 0, 1, ksize=sobel_kernel )
+    
+    # Take the absolute value of the x and y gradients
+    grad_x_abs = np.absolute( grad_x )
+    grad_y_abs = np.absolute( grad_y )
+    
+    # Use np.arctan2(abs_sobely, abs_sobelx) to calculate the direction of the gradient 
+    direction = np.arctan2( grad_y_abs, grad_x_abs )
+    
+    # Create a binary mask where direction thresholds are met
+    binary_output = np.zeros_like( gray )
+    binary_output[ (direction > thresh[0]) & (direction < thresh[1]) ] = 1
+    
+    # Return this mask binary_output image
+    return binary_output
+
+# Function that applies Sobel x and y, then computes the magnitude of the gradient and applies a threshold
+def magnitude_threshold(img, sobel_kernel=3, mag_thresh=(0, 255)):
+    
+    # Convert to grayscale
+    gray = cv2.cvtColor( img, cv2.COLOR_RGB2GRAY )
+    
+    # Take the gradient in x and y separately
+    x_grad = cv2.Sobel( gray, cv2.CV_64F, 1, 0, ksize=sobel_kernel )
+    y_grad = cv2.Sobel( gray, cv2.CV_64F, 0, 1, ksize=sobel_kernel )
+    
+    # Calculate the magnitude
+    mag = np.sqrt( np.square( x_grad ) + np.square( y_grad ) )
+    
+    # Scale to 8-bit (0 - 255) and convert to type = np.uint8
+    scale_factor = np.max( mag ) / 255
+    scaled = (mag / scale_factor).astype( np.uint8 )
+
+    # Create a binary mask where mag thresholds are met
+    binary_output = np.zeros_like( mag )
+    binary_output[ (scaled > mag_thresh[0]) & (scaled < mag_thresh[1]) ] = 1
+
+    # Return this binary_output image
+    return binary_output
+
+# Function that applies Sobel x or y, then takes an absolute value and applies a threshold.
+def sobel_threshold(img, orient='x', sobel_kernel=3, thresh=(0, 255)):
+    # Convert to grayscale
+    gray = cv2.cvtColor( img, cv2.COLOR_RGB2GRAY )
+    
+    # Take the derivative in x or y given orient = 'x' or 'y', and absolute
+    if orient == 'x':
+        x = 1
+        y = 0
+    else:
+        x = 0
+        y = 1
+    deriv = np.absolute( cv2.Sobel( gray, cv2.CV_64F, x, y ) )
+    
+    # Rescale back to 8 bit integer
+    scaled_sobel = np.uint8( 255*deriv / np.max(deriv) )
+    
+    # Create a copy and apply the threshold
+    binary_output = np.zeros_like(scaled_sobel)
+    binary_output[(scaled_sobel >= thresh[0]) & (scaled_sobel <= thresh[1])] = 1
+    return binary_output
+
+
+# Our mega threshold function
+@timing
+def threshold(image):
+    # Apply each of the thresholding functions
+    ksize = 3
+    gradx_binary = sobel_threshold(image, orient='x', sobel_kernel=ksize, thresh=(80, 255))
+    mag_binary   = magnitude_threshold(image, sobel_kernel=ksize, mag_thresh=(30, 255)) 
+    dir_binary   = direction_threshold(image, sobel_kernel=ksize, thresh=(0.9, 1.2))
+    hls_binary   = hls_select(image, (50, 255), 1)
+#    yuv_binary = yuv_select(image, (50, 95), 0)
+
+    # Combine them
+    combined = np.zeros_like(gradx_binary)
+    combined[ ( ((mag_binary == 1) & (dir_binary == 1)) | (hls_binary == 1) ) ] = 1
+    return gradx_binary
+
+# Warp
+@timing
+def warp_image(image):
+    global M
+    return cv2.warpPerspective(image, M, (image.shape[1], image.shape[0]))
+
+# Find those lanes
+@timing
+def find_lanes(image):
     
     # Create window visualisation image
-    windows_image = np.zeros_like(processed_image)
+    windows_image = np.zeros_like(image)
 
     # Take a histogram of the bottom half of the image
-    histogram = np.sum(processed_image[int(processed_image.shape[0]/2):,:], axis=0)
+    histogram = np.sum(image[int(image.shape[0]/2):, :], axis=0)
 
     # Find the peak of the left and right halves of the histogram
     # These will be the starting point for the left and right lines
@@ -41,10 +161,10 @@ def find_lanes(processed_image):
     nwindows = 9
 
     # Set height of windows
-    window_height = np.int(processed_image.shape[0]/nwindows)
+    window_height = np.int(image.shape[0]/nwindows)
 
     # Identify the x and y positions of all nonzero pixels in the image
-    nonzero = processed_image.nonzero()
+    nonzero = image.nonzero()
     nonzeroy = np.array(nonzero[0])
     nonzerox = np.array(nonzero[1])
 
@@ -53,7 +173,7 @@ def find_lanes(processed_image):
     rightx_current = rightx_base
 
     # Set the width of the windows +/- margin
-    margin = 100
+    margin = 10
 
     # Set minimum number of pixels found to recenter window
     minpix = 50
@@ -65,8 +185,8 @@ def find_lanes(processed_image):
     # Step through the windows one by one
     for window in range(nwindows):
         # Identify window boundaries in x and y (and right and left)
-        win_y_low = processed_image.shape[0] - (window+1)*window_height
-        win_y_high = processed_image.shape[0] - window*window_height
+        win_y_low = image.shape[0] - (window+1)*window_height
+        win_y_high = image.shape[0] - window*window_height
         win_xleft_low = leftx_current - margin
         win_xleft_high = leftx_current + margin
         win_xright_low = rightx_current - margin
@@ -111,7 +231,7 @@ def find_lanes(processed_image):
         right_fit = [0,0,0]
 
     # Generate x and y values for plotting
-    ploty = np.linspace(0, processed_image.shape[0]-1, processed_image.shape[0] )
+    ploty = np.linspace(0, image.shape[0]-1, image.shape[0] )
     left_fitx = left_fit[0]*ploty**2 + left_fit[1]*ploty + left_fit[2]
     right_fitx = right_fit[0]*ploty**2 + right_fit[1]*ploty + right_fit[2]
 
@@ -125,12 +245,12 @@ def find_lanes(processed_image):
 
     # Create an output image to draw on and visualize the result. Colouring time. Colour the lanes.
     if windows_image is not None:
-        lanes_image = np.dstack((processed_image, windows_image, processed_image))*255
+        lanes_image = np.dstack((image, windows_image, image))*255
         lanes_image[nonzeroy[left_lane_inds], nonzerox[left_lane_inds]] = [255, 0, 0]
         lanes_image[nonzeroy[right_lane_inds], nonzerox[right_lane_inds]] = [0, 0, 255]
     else:
         lanes_image = np.zeros_like(new_image)
-    new_image = np.dstack((processed_image, processed_image, processed_image))*255
+    new_image = np.dstack((image, image, image))*255
     coloured_image = np.zeros_like(new_image)
 
     # Draw the lane onto the warped blank image
@@ -138,7 +258,7 @@ def find_lanes(processed_image):
     cv2.fillPoly(coloured_image, np.int_([right_line_pts]), (0, 0, 255))
 
     # Combine
-    combined_image = cv2.addWeighted(new_image, 1, coloured_image, 0.3, 0)
+    combined_image = cv2.addWeighted(new_image, 1, coloured_image, 1, 0)
 
     return windows_image, lanes_image, coloured_image, combined_image, left_fitx, right_fitx, ploty
 
@@ -231,110 +351,6 @@ def draw_lanes(image, processed_image, lanes_image, left_fitx, right_fitx, ploty
     # Done
     return result
     
-# --------- Thresholding functions ----------
-
-# Define a function that applies Sobel x and y, then computes the direction of the gradient and applies a threshold.
-def dir_threshold(img, sobel_kernel=3, thresh=(0, np.pi/2)):
-    # Convert to grayscale
-    gray = cv2.cvtColor( img, cv2.COLOR_RGB2GRAY )
-    
-    # Take the gradient in x and y separately
-    grad_x = cv2.Sobel( gray, cv2.CV_64F, 1, 0, ksize=sobel_kernel )
-    grad_y = cv2.Sobel( gray, cv2.CV_64F, 0, 1, ksize=sobel_kernel )
-    
-    # Take the absolute value of the x and y gradients
-    grad_x_abs = np.absolute( grad_x )
-    grad_y_abs = np.absolute( grad_y )
-    
-    # Use np.arctan2(abs_sobely, abs_sobelx) to calculate the direction of the gradient 
-    direction = np.arctan2( grad_y_abs, grad_x_abs )
-    
-    # Create a binary mask where direction thresholds are met
-    binary_output = np.zeros_like( gray )
-    binary_output[ (direction > thresh[0]) & (direction < thresh[1]) ] = 1
-    
-    # Return this mask binary_output image
-    return binary_output
-
-# Define a function that applies Sobel x and y, then computes the magnitude of the gradient and applies a threshold
-def mag_thresh(img, sobel_kernel=3, mag_thresh=(0, 255)):
-    
-    # Convert to grayscale
-    gray = cv2.cvtColor( img, cv2.COLOR_RGB2GRAY )
-    
-    # Take the gradient in x and y separately
-    x_grad = cv2.Sobel( gray, cv2.CV_64F, 1, 0, ksize=sobel_kernel )
-    y_grad = cv2.Sobel( gray, cv2.CV_64F, 0, 1, ksize=sobel_kernel )
-    
-    # Calculate the magnitude
-    mag = np.sqrt( np.square( x_grad ) + np.square( y_grad ) )
-    
-    # Scale to 8-bit (0 - 255) and convert to type = np.uint8
-    scale_factor = np.max( mag ) / 255
-    scaled = (mag / scale_factor).astype( np.uint8 )
-
-    # Create a binary mask where mag thresholds are met
-    binary_output = np.zeros_like( mag )
-    binary_output[ (scaled > mag_thresh[0]) & (scaled < mag_thresh[1]) ] = 1
-
-    # Return this binary_output image
-    return binary_output
-
-# Define a function that applies Sobel x or y, then takes an absolute value and applies a threshold.
-def abs_sobel_thresh(img, orient='x', sobel_kernel=3, thresh=(0, 255)):
-    # Convert to grayscale
-    gray = cv2.cvtColor( img, cv2.COLOR_RGB2GRAY )
-    
-    # Take the derivative in x or y given orient = 'x' or 'y', and absolute
-    if orient == 'x':
-        x = 1
-        y = 0
-    else:
-        x = 0
-        y = 1
-    deriv = np.absolute( cv2.Sobel( gray, cv2.CV_64F, x, y ) )
-    
-    # Rescale back to 8 bit integer
-    scaled_sobel = np.uint8( 255*deriv / np.max(deriv) )
-    
-    # Create a copy and apply the threshold
-    binary_output = np.zeros_like(scaled_sobel)    
-    binary_output[(scaled_sobel >= thresh[0]) & (scaled_sobel <= thresh[1])] = 1
-    return binary_output
-
-# Define a function that thresholds the S-channel of HLS
-def hls_select(img, thresh=(0, 255)):
-    # Convert to HLS color space
-    hls = cv2.cvtColor( img, cv2.COLOR_RGB2HLS )
-    
-    # Apply a threshold to the S channel
-    s = hls[:,:,2]
-    binary_output = np.zeros_like( s )
-    binary_output[ (s>thresh[0]) & (s<=thresh[1]) ] = 1
-    
-    # Return a binary image of threshold result
-    return binary_output
-
-# Define our mega threshold function
-@timing
-def threshold(image):
-    # Apply each of the thresholding functions
-    ksize = 3
-    #gradx_binary = abs_sobel_thresh(image, orient='x', sobel_kernel=ksize, thresh=(10, 255))
-    #grady_binary = abs_sobel_thresh(image, orient='y', sobel_kernel=ksize, thresh=(10, 255))
-    mag_binary = mag_thresh(image, sobel_kernel=ksize, mag_thresh=(30, 255)) 
-    #dir_binary = dir_threshold(image, sobel_kernel=ksize, thresh=(0.9, 1.2))
-    #hls_binary = hls_select(image, thresh=(50, 255))
-
-    # Stack each channel to view their individual contributions in green and blue respectively
-    #stacked_binary = np.dstack(( gradx_binary, gradx_binary, mag_binary ))
-
-    # Combine them
-    #combined = np.zeros_like(gradx_binary)
-    #combined[ ( ((mag_binary == 1) & (dir_binary == 1)) | (hls_binary == 1) ) ] = 1
-    #return combined, stacked_binary, gradx_binary, grady_binary, mag_binary, dir_binary
-    return mag_binary
-
 # -------------- The pipeline --------------
 
 # The full pipeline
@@ -344,101 +360,59 @@ def pipeline( image ):
     global speed, steering_position
     global M, Minv
 
-
     # Define source, dest and matricies for perspective stretch and stretch back
     if M is None:
         src = np.float32(
-            [[image.shape[1] * 0.2, 0], 
+           [[image.shape[1] * 0.2, 0], 
             [image.shape[1] * 0.8, 0],
-            [-100, image.shape[0]],
-            [100+image.shape[1], image.shape[0]]])
+            [-400,                 image.shape[0]],
+            [400+image.shape[1],   image.shape[0]]])
         dest = np.float32(
-            [[0, 0],
+            [[0,              0],
              [image.shape[1], 0],
-             [0, image.shape[0]*2],
-             [image.shape[1], image.shape[0]*2]])
-
-        # Test images
-#        src = np.float32(
-#            [[538, 460], 
-#            [740, 460],
-#            [0, 690],
-#            [1280, 690]])
-
+             [0,              image.shape[0]],
+             [image.shape[1], image.shape[0]]])
         M = cv2.getPerspectiveTransform(src, dest)
         Minv = cv2.getPerspectiveTransform(dest, src)
  
-    # Threshold image to make the line edges stand out
-    #thresholded_image, s, _, _, _, _ = threshold(image)
-    thresholded_image = threshold(image)
+    # Threshold the image to make the line edges stand out
+#    image = threshold(image)
+    image = sobel_threshold(image, orient='x', sobel_kernel=3, thresh=(80, 255))
 
-    time1 = time.time()
-    # Stretch the image out so we have basically a bird's-eye view of the scene in front of us
-    processed_image = cv2.warpPerspective(thresholded_image, M, (thresholded_image.shape[1], thresholded_image.shape[0]*2) )
-    time2 = time.time()	
-    print( 'warp %d ms' % ((time2-time1)*1000.0) )
+    # Stretch the image out so we have a bird's-eye view of the scene
+    image = warp_image(image)
 
-    return image
+    # Find the lanes, y goes from 240 to 0, and left_lane_x and right_lane_x map up the lanes
+    windows_image, lanes_image, coloured_image, combined_image, left_fitx, right_fitx, ploty = find_lanes(image)
 
-    # Find any lanes
-    _, lanes_image, _, _, left_fit, right_fit, ploty = find_lanes(processed_image)
+    # Fit polynomial curves to those lanes
+ #   left_curverad, right_curverad, left_fitx, right_fitx, ploty = fit_curves(left_lane_x, right_lane_x, y)
 
-    # Fit poly curves to those lanes
-    left_curverad, right_curverad, left_fitx, right_fitx, ploty = fit_curves(left_fit, right_fit, ploty)
+    return combined_image
 
     # Update smoothed curve radius frame by frame, 20% each time
-    if left_curverad:
-        curve_radius = (left_curverad + right_curverad) / 2
-    else:
-        curve_radius = 0
+#    if left_curverad and right_curverad:
+#        curve_radius = (left_curverad + right_curverad) / 2
+#    else:
+#        curve_radius = 0
 
     # Figure out possible new steering position from current curve_radius
-    if curve_radius > 900 or curve_radius < -900:
-        new_steering_position = 0
-    elif curve_radius == 0:
-        new_steering_position = 0
-    else:
-        new_steering_position = 50000.0 / curve_radius
+#    if curve_radius > 900 or curve_radius < -900:
+#        new_steering_position = 0
+#    elif curve_radius == 0:
+#        new_steering_position = 0
+#    else:
+#        new_steering_position = 50000.0 / curve_radius
 
     # Update steering position 20% each time
-    if new_steering_position == 0 or new_steering_position > 100 or new_steering_position < -100:
-        pass
-    else:
-        steering_position += ( (new_steering_position - steering_position) / 20 )
+#    if new_steering_position == 0 or new_steering_position > 100 or new_steering_position < -100:
+#        pass
+#    else:
+#        steering_position += ( (new_steering_position - steering_position) / 20 )
 
     # Test speed
-    speed = max(0, 20 - abs(steering_position)/4)
+#    speed = max(0, 20 - abs(steering_position)/4)
 
     # Draw those lines
     #image_out = draw_lanes(image, processed_image, lanes_image, left_fitx, right_fitx, ploty, steering_position, speed)
-    return image
-
-# Define video function
-def create_video( input_video, output_video ):
-
-    #from moviepy.editor import VideoFileClip
-    # Process video
-    video = VideoFileClip( input_video )
-    video_processed = video.fl_image( pipeline )
-    video_processed.write_videofile( output_video, audio=False )
-
-# Test vision pipeline on a stored image and video
-def test_pipeline():    
-    import matplotlib.image as mpimg
-   
-     # Open a sample image
-    image = mpimg.imread('test_images/straight_lines1.jpg') 
-
-    # Run our vision image processing pipeline
-    pipelined_image = pipeline(image)
-
-    # Save
-    mpimg.imsave('output.png', pipelined_image) 
-
-    # Open it to see
-    img = Image.open('output.png')
-    img.show() 
-
-    # Create video
-    create_video( "test_videos/curves.mp4", "output.mp4" )
-
+ 
