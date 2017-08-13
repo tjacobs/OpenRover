@@ -176,7 +176,7 @@ def find_lanes(image):
     margin = 10
 
     # Set minimum number of pixels found to recenter window
-    minpix = 50
+    minpix = 5
 
     # Create empty lists to receive left and right lane pixel indices
     left_lane_inds = []
@@ -382,13 +382,17 @@ def pipeline( image ):
     # Stretch the image out so we have a bird's-eye view of the scene
     image = warp_image(image)
 
-    # Find the lanes, y goes from 240 to 0, and left_lane_x and right_lane_x map up the lanes
-    windows_image, lanes_image, coloured_image, combined_image, left_fitx, right_fitx, ploty = find_lanes(image)
+    # Find the lanes, y goes from 0 to y-max, and left_lane_x and right_lane_x map the lanes
+    windows_image, lanes_image, coloured_image, combined_image, left_lane_x, right_lane_x, y = find_lanes(image)
 
-    # Fit polynomial curves to those lanes
- #   left_curverad, right_curverad, left_fitx, right_fitx, ploty = fit_curves(left_lane_x, right_lane_x, y)
+    # Find centre line x co-ords
+    centre = [ int(l_x + r_x / 2) for l_x, r_x in zip(left_lane_x, right_lane_x) ]
 
-    return combined_image
+    # After all that, just take the bottom of the centre line, and the top of it, and steer that way
+    steer = centre[0]- centre[-1]
+
+    # Return
+    return combined_image, steer
 
     # Update smoothed curve radius frame by frame, 20% each time
 #    if left_curverad and right_curverad:
