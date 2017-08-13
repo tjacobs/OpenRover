@@ -1,9 +1,9 @@
 try:
 	import cv2
-	import camera
-	import vision
 except:
 	print("No OpenCV installed.")
+import camera
+import vision
 try:
 	from PIL import Image   
 except:
@@ -56,28 +56,33 @@ time_start = time.time()
 while True:
 
     # Get a frame
-    frame = camera.read() #getFrame()
+    frame = camera.read()
 
     # Run through our machine vision pipeline
-    frame = vision.pipeline(frame)
+    frame, steer = vision.pipeline(frame)
 
     # Post process
     #processed_frame = process(frame)
 
-    # Move
+    # Steer
+    steer = min(max(steer/20, -1), 1)
+    display( "Steer: %0.1f\n" % steer)
+    motors.setPWM(2, steer)
+    motors.runPWM(2)
+
+    # Accellerate
     if int(i) % 10 == 0:
         display("Jump forward!")
         motors.setPWM(1, 0.56)
     else:
         motors.setPWM(1, 0.5)
-    motors.setPWM(2, math.sin(i/100)/2 + 0.25)
-    motors.runPWM(2)
     i += 0.20
 
     # Save image to disk to debug
-#    mpimg.imsave('out.png', processed_frame) 
+    mpimg.imsave('out.png', frame) 
 #    img = Image.open('out.png')
-#    img.show() 
+#    img.show()
+#    time.sleep(5)
 
     # Count frames per second
     frames_per_second += 1
