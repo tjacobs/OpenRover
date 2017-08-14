@@ -6,6 +6,7 @@ import asyncio
 import websockets
 import subprocess
 from threading import Thread
+import cv2
 
 # Export mouse x and y, and keyboard button press status
 left_mouse_down = False
@@ -80,16 +81,48 @@ def video_function():
     
     # Stop ffmpeg
     os.system("sudo killall -9 ffmpeg 2> /dev/null")
+   
+    # /dev/videoWHAT 
+    videonum = 6
 
-    # Start ffmpeg
+    # Start camera capture
+    cap = cv2.VideoCapture(videonum)
+    cap.set(3, 640)
+    cap.set(4, 480)
+    ret, frame = cap.read()
+    height, width, ch = frame.shape
+    dimension = '{}x{}'.format(width, height)
+    fps = str(cap.get(cv2.CAP_PROP_FPS))
+
+    # With sound:
     #commandLine = 'ffmpeg -loglevel error -f alsa -ar 44100 -ac 1 -i hw:1 -f mpegts -codec:a mp2 -f v4l2 -framerate 30 -video_size 640x480 -i /dev/video0 -f mpegts -codec:v mpeg1video -s 640x480 -b:v 200k -bf 0 -muxdelay 0.001 http://meetzippy.com:8081/supersecret'
-    commandLine = 'ffmpeg -loglevel error -f mpegts -codec:a mp2 -f v4l2 -framerate 30 -video_size 640x480 -i /dev/video0 -f mpegts -codec:v mpeg1video -s 640x480 -b:v 200k -bf 0 -muxdelay 0.001 http://meetzippy.com:8081/supersecret'
-    ffmpegProcess = subprocess.Popen(shlex.split(commandLine))    
+
+    # From device: 
+    commandLine = 'ffmpeg -loglevel error -f mpegts -codec:a mp2 -f v4l2 -framerate 30 -video_size 640x480 -i /dev/video{} -f mpegts -codec:v mpeg1video -s 640x480 -b:v 200k -bf 0 -muxdelay 0.001 http://meetzippy.com:8081/supersecret'.format(videonum)
+
+    # From stdin:
+    commandLine = 'ffmpeg -y -f rawvideo -vcodec rawvideo -s {dimension} -pix_fmt bgr24 -i - -an -video_size 640x480 -f mpegts -codec:v mpeg1video -b:v 200k -bf 0 http://meetzippy.com:8081/supersecret'.format(dimension=dimension)
+
+    #command = 'ffmpeg -y -f rawvideo -vcodec rawvideo -i - -an -f mpegts -codec:v mpeg1video -s 640x480 -b:v 200k -bf 0 http://meetzippy.com:8081/supersecret'
+    
+    # Start
+    ffmpegProcess = subprocess.Popen(shlex.split(commandLine), stdin=subprocess.PIPE)#, stderr=subprocess.PIPE)
     print( "Started ffmpeg" )
-#    time.sleep(5)
-#    print( "ffmpeg" )
+
+    # Pipe that pipe
+    while True:
+        ret, frame = cap.read()
+        if not ret:
+            break
+        ffmpegProcess.stdin.write(frame.tostring())
+
+    #cap.release()
+    #proc.stdin.close()
+    #proc.stderr.close()
+    #proc.wait()
 
 # Start thread
 thread = Thread(target=video_function, args=())
 thread.start()    
+
 
