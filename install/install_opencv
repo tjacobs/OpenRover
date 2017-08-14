@@ -60,7 +60,7 @@ if [ ! -d x264-snapshot-20170806-2245-stable ]; then
 fi
 
 # FFMpeg
-if [ -d ffmpeg ]; then
+if [ ! -d ffmpeg ]; then
 	git clone https://git.ffmpeg.org/ffmpeg.git ffmpeg
 	cd ffmpeg
 	 ./configure --enable-gpl --enable-libx264 --enable-libxvid --enable-nonfree --enable-postproc --enable-version3 --enable-shared --enable-pic
