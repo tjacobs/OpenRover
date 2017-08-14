@@ -1,3 +1,10 @@
+# Drive.
+
+# The main file.
+# Run this to start the system.
+#
+#
+
 try:
 	import cv2
 except:
@@ -12,10 +19,11 @@ try:
 	import matplotlib.image as mpimg
 except:
 	print("No Matplotlib installed.")
+import sys
 import time
 import math
 import motors
-import sys
+import video
 
 # Calibrate ESC
 print( "Calibrating ESC." )
@@ -42,11 +50,11 @@ def process(image):
 #cv2.moveWindow( "preview", 10, 10 )
 
 # Start camera
-camera.startCamera( (320, 240) )
+camera.startCamera( (320, 240), 6 )
 
 # Open a sample image
-frame = mpimg.imread('test_images/test1.jpg') 
-frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB) 
+#frame = mpimg.imread('test_images/test1.jpg') 
+#frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB) 
 #frame = cv2.imread('test_images/test1.jpg') # Use OpenCV instead if matplotlib is giving you trouble
 
 # Loop
@@ -62,7 +70,10 @@ while True:
     frame, steer = vision.pipeline(frame)
 
     # Post process
-    #processed_frame = process(frame)
+    frame = process(frame)
+
+    # Pump this frame out so we can see it
+    video.send_frame(frame)
 
     # Steer
     steer = min(max(steer/20, -1), 1)
@@ -79,7 +90,7 @@ while True:
     i += 0.20
 
     # Save image to disk to debug
-    mpimg.imsave('out.png', frame) 
+#    mpimg.imsave('out.png', frame) 
 #    img = Image.open('out.png')
 #    img.show()
 #    time.sleep(5)

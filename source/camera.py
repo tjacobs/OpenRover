@@ -39,7 +39,7 @@ def update():
 			# Add the frame to the queue
 			Q.put(frame)
 
-def startCamera( resolution=(160, 128) ):
+def startCamera(resolution, cam_number=0):
 	global rawCapture, picamera, cap, Q
 
 	try:
@@ -52,7 +52,7 @@ def startCamera( resolution=(160, 128) ):
 		# Try regular USB webcam
 		try:
 			print("Starting webcam capture.")
-			cap = cv2.VideoCapture(0)
+			cap = cv2.VideoCapture(cam_number)
 			cap.set(3, resolution[0])
 			cap.set(4, resolution[1])
 			#cap.set(15, 0.1) # Exposure, not usually supported
