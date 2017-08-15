@@ -47,7 +47,7 @@ def remote_connect():
     global x, y, left_mouse_down, right_mouse_down, left, right, up, down
     try:
         websocket = yield from websockets.connect("ws://meetzippy.com:8080")
-        print( "Connected to server." )
+#        print( "Connected to server." )
     except:
         print( "No meetzippy.com connection." )
         return
@@ -56,7 +56,7 @@ def remote_connect():
     try:
         while not done:
             text = yield from websocket.recv()
-            #print( text )
+            print( text )
             if text.startswith( 'left' ):
                 left = (len(text.split()) > 1 and text.split()[1] == "down")
             elif text.startswith( 'right' ):
@@ -128,7 +128,7 @@ def video_function():
     commandLine = 'ffmpeg -y -f rawvideo -vcodec rawvideo -s {dimension} -pix_fmt bgr24 -i - -an -video_size 640x480 -f mpegts -codec:v mpeg1video -b:v 200k -bf 0 http://meetzippy.com:8081/supersecret'.format(dimension=dimension)
 
     # Start
-    ffmpegProcess = subprocess.Popen(shlex.split(commandLine), stdin=subprocess.PIPE)#, stderr=subprocess.PIPE)
+    ffmpegProcess = subprocess.Popen(shlex.split(commandLine), stdin=subprocess.PIPE, stderr=subprocess.PIPE)
     print( "Started ffmpeg" )
 
     # Pipe that pipe

@@ -25,23 +25,31 @@ import motors
 import video
 
 # Calibrate ESC
-print( "Calibrating ESC." )
-motors.setPWM(1, 1.0)
-motors.startPWM(1, 0.01)
-time.sleep(.5)
-motors.setPWM(1, 0.0)
-time.sleep(.5)
-motors.setPWM(1, 0.5)
-time.sleep(.5)
+if False:
+    print( "Calibrating ESC." )
+    motors.setPWM(1, 1.0)
+    motors.startPWM(1, 0.01)
+    time.sleep(.5)
+    motors.setPWM(1, 0.0)
+    time.sleep(.5)
+    motors.setPWM(1, 0.5)
+    time.sleep(.5)
 
-def display(string):
-    sys.stdout.write("\r\x1b[K" + string)
-    sys.stdout.flush()
+# Our outputs
+differential = True # Differential drive (two independently powered motors each side like a tank), or Ackermann steering (angled front wheels, like a car)
+steering = 0.0
+acceleration = 0.0
 
-# Frame processing steps
+# Video frame post-processing step
+frames_per_second = 0
+frames_per_second_so_far = 0
 def process(image):
     # Just put text over it
-    cv2.putText(image, "OpenRover", (10, 20), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (255, 155, 255))
+    global frames_per_second, steering, acceleration
+    cv2.putText(image, "OpenRover", (10, 20), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (255, 215, 215))
+    cv2.putText(image, "FPS: {}".format(frames_per_second), (10, 40), cv2.FONT_HERSHEY_SIMPLEX, 0.4, (255, 195, 195))
+    cv2.putText(image, "Steering: {0:.2f}".format(steering), (120, 20), cv2.FONT_HERSHEY_SIMPLEX, 0.4, (255, 195, 195))
+    cv2.putText(image, "Acceleration: {0:.2f}".format(acceleration), (120, 40), cv2.FONT_HERSHEY_SIMPLEX, 0.4, (255, 195, 195))
     return image
 
 # Create window
@@ -51,24 +59,37 @@ def process(image):
 # Start camera
 camera.startCamera( (640, 480), 6 )
 
-# Open a sample image
+# Open a test image
 #frame = mpimg.imread('test_images/test1.jpg') 
 #frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB) 
 #frame = cv2.imread('test_images/test1.jpg') # Use OpenCV instead if matplotlib is giving you trouble
 
 # Loop
 i = 0.0
-frames_per_second = 0
 time_start = time.time()
 while True:
 
     # Remote controls
     if video.up:
-        vision.warp = True        
+        acceleration += 0.1
+    if video.down:
+        acceleration -= 0.1
+    if video.right:
+        steering += 0.1
+    if video.left:
+        steering -= 0.1
+        
+    # Slow down
+    acceleration *= 0.9
+    steering *= 0.9
+
+    # Bonus controls
+    #if video.up:
+    #    vision.warp = True        
     if video.down:
         vision.warp = False
-    if video.right:
-        vision.threshold = True
+    #if video.right:
+    #    vision.threshold = True
     if video.left:
         vision.threshold = False
     
@@ -76,7 +97,7 @@ while True:
     frame = camera.read()
 
     # Run through our machine vision pipeline
-    frame, steer = vision.pipeline(frame)
+    frame, vision_steering = vision.pipeline(frame)
 
     # Post process
     frame = process(frame)
@@ -84,36 +105,34 @@ while True:
     # Pump this frame out so we can see it remotely
     video.send_frame(frame)
 
-    # Steer
-    steer = min(max(steer/20, -1), 1)
-    display( "Steer: %0.1f\n" % steer)
-    motors.setPWM(2, steer)
-    motors.runPWM(2)
-
-    # Accellerate
-    print(i)
-    if int(i) % 10 == 0:
-        display("Jump forward!")
-        motors.setPWM(1, 0.56)
+    # Output
+    steering = min(max(steering, -1.0), 1.0)
+    acceleration = min(max(acceleration, -1.0), 1.0)
+    if differential:
+        # Steer tank style
+        motors.setPWM(1, acceleration + steering)
+        motors.setPWM(2, acceleration - steering)
     else:
-        motors.setPWM(1, 0.5)
-    i += 0.20
+        # Steer Ackermann style
+        motors.setPWM(2, steering)
+        motors.runPWM(2)
 
-    # Save image to disk to debug
+        # Accellerate
+        motors.setPWM(1, acceleration)
+
+    # Save frame to disk to debug
 #    mpimg.imsave('out.png', frame) 
 #    img = Image.open('out.png')
 #    img.show()
-#    time.sleep(5)
 
     # Count frames per second
-    frames_per_second += 1
+    frames_per_second_so_far += 1
     if( time.time() - time_start > 1.0 ):
-        print( "FPS: %.0f\n" % frames_per_second)
-        #display("FPS: %.0f" % frames_per_second)
-        frames_per_second = 0
+        frames_per_second = frames_per_second_so_far
+        frames_per_second_so_far = 0
         time_start = time.time()
 
-    # Show
+    # Show frame
  #   cv2.imshow( "preview", frame )
 
     # Esc key hit?

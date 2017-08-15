@@ -9,7 +9,7 @@ try:
     from rcpy.servo import esc1
     from rcpy.servo import servo2
 except:
-    print("Error: No rcpy found.")
+    print("No rcpy installed.")
     pass
 
 # Import flight controller motor controller if present
@@ -48,7 +48,8 @@ def initMotors():
         GPIO.setup(motorEnablePin, GPIO.OUT)
         GPIO.output(motorEnablePin, GPIO.LOW)
     except:
-        print( "Error: Cannot access GPIO." )
+        pass
+#        print( "Error: Cannot access GPIO." )
 
 def stopMotors():
     global board
@@ -158,7 +159,7 @@ def setPWM(number, value):
             servo2.set(duty)
     except:
         pass
-    sendMotorCommands([0, 100.0 * number1, 100.0 * number2], True)
+    sendMotorCommands([0, 100.0 * number1, 100.0 * number2], False)
 
 def servosOff():
     try:
