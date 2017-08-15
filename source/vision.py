@@ -6,6 +6,11 @@ from PIL import Image
 import time
 import glob
 
+# Options
+warp = False
+threshold = False
+detect_lanes = False
+
 # Globals
 M = None
 Minv = None
@@ -15,7 +20,7 @@ def timing(f):
         time1 = time.time()
         ret = f(*args)
         time2 = time.time()
-        print( '%s %d ms' % (f.__name__, (time2-time1)*1000.0) )
+#        print( '%s %d ms' % (f.__name__, (time2-time1)*1000.0) )
         return ret
     return wrap
 
@@ -99,7 +104,7 @@ def magnitude_threshold(img, sobel_kernel=3, mag_thresh=(0, 255)):
 # Function that applies Sobel x or y, then takes an absolute value and applies a threshold.
 def sobel_threshold(img, orient='x', sobel_kernel=3, thresh=(0, 255)):
     # Convert to grayscale
-    gray = cv2.cvtColor( img, cv2.COLOR_RGB2GRAY )
+    gray = img #cv2.cvtColor( img, cv2.COLOR_RGB2GRAY )
     
     # Take the derivative in x or y given orient = 'x' or 'y', and absolute
     if orient == 'x':
@@ -112,7 +117,7 @@ def sobel_threshold(img, orient='x', sobel_kernel=3, thresh=(0, 255)):
     
     # Rescale back to 8 bit integer
     scaled_sobel = np.uint8( 255*deriv / np.max(deriv) )
-    
+    return scaled_sobel
     # Create a copy and apply the threshold
     binary_output = np.zeros_like(scaled_sobel)
     binary_output[(scaled_sobel >= thresh[0]) & (scaled_sobel <= thresh[1])] = 1
@@ -143,10 +148,7 @@ def warp_image(image):
 
 # Find those lanes
 @timing
-def find_lanes(image):
-    
-    # Create window visualisation image
-    windows_image = np.zeros_like(image)
+def find_lanes(image, orig):
 
     # Take a histogram of the bottom half of the image
     histogram = np.sum(image[int(image.shape[0]/2):, :], axis=0)
@@ -158,7 +160,7 @@ def find_lanes(image):
     rightx_base = np.argmax(histogram[midpoint:]) + midpoint
 
     # Choose the number of sliding windows
-    nwindows = 9
+    nwindows = 5
 
     # Set height of windows
     window_height = np.int(image.shape[0]/nwindows)
@@ -173,10 +175,10 @@ def find_lanes(image):
     rightx_current = rightx_base
 
     # Set the width of the windows +/- margin
-    margin = 10
+    margin = 20
 
     # Set minimum number of pixels found to recenter window
-    minpix = 5
+    minpix = 2
 
     # Create empty lists to receive left and right lane pixel indices
     left_lane_inds = []
@@ -193,8 +195,8 @@ def find_lanes(image):
         win_xright_high = rightx_current + margin
 
         # Draw the windows on the visualization image
-        cv2.rectangle(windows_image, (win_xleft_low, win_y_low), (win_xleft_high, win_y_high), (255, 255, 0), 2) 
-        cv2.rectangle(windows_image, (win_xright_low, win_y_low), (win_xright_high, win_y_high), (255, 255, 0), 2) 
+        cv2.rectangle(orig, (win_xleft_low, win_y_low), (win_xleft_high, win_y_high), (255, 255, 0), 2)
+        cv2.rectangle(orig, (win_xright_low, win_y_low), (win_xright_high, win_y_high), (255, 255, 0), 2)
 
         # Identify the nonzero pixels in x and y within the window
         good_left_inds = ((nonzeroy >= win_y_low) & (nonzeroy < win_y_high) & (nonzerox >= win_xleft_low) & (nonzerox < win_xleft_high)).nonzero()[0]
@@ -210,6 +212,8 @@ def find_lanes(image):
         if len(good_right_inds) > minpix:        
             rightx_current = np.int(np.mean(nonzerox[good_right_inds]))
 
+    return orig
+    
     # Concatenate the arrays of indices
     left_lane_inds = np.concatenate(left_lane_inds)
     right_lane_inds = np.concatenate(right_lane_inds)
@@ -219,6 +223,8 @@ def find_lanes(image):
     lefty = nonzeroy[left_lane_inds] 
     rightx = nonzerox[right_lane_inds]
     righty = nonzeroy[right_lane_inds] 
+
+    return image
 
     # Fit a second order polynomial to each
     try:
@@ -244,12 +250,16 @@ def find_lanes(image):
     right_line_pts = np.hstack((right_line_window1, right_line_window2))
 
     # Create an output image to draw on and visualize the result. Colouring time. Colour the lanes.
-    if windows_image is not None:
-        lanes_image = np.dstack((image, windows_image, image))*255
-        lanes_image[nonzeroy[left_lane_inds], nonzerox[left_lane_inds]] = [255, 0, 0]
-        lanes_image[nonzeroy[right_lane_inds], nonzerox[right_lane_inds]] = [0, 0, 255]
-    else:
+    try:
+        if windows_image is not None:
+            lanes_image = np.dstack((image, windows_image, image))*255
+            lanes_image[nonzeroy[left_lane_inds], nonzerox[left_lane_inds]] = [255, 0, 0]
+            lanes_image[nonzeroy[right_lane_inds], nonzerox[right_lane_inds]] = [0, 0, 255]
+        else:
+            lanes_image = np.zeros_like(new_image)
+    except:
         lanes_image = np.zeros_like(new_image)
+
     new_image = np.dstack((image, image, image))*255
     coloured_image = np.zeros_like(new_image)
 
@@ -359,6 +369,7 @@ speed = 0
 def pipeline( image ):
     global speed, steering_position
     global M, Minv
+    global warp
 
     # Define source, dest and matricies for perspective stretch and stretch back
     if M is None:
@@ -377,14 +388,22 @@ def pipeline( image ):
  
     # Threshold the image to make the line edges stand out
 #    image = threshold(image)
-    image = sobel_threshold(image, orient='x', sobel_kernel=3, thresh=(80, 255))
+    if threshold:
+        image = sobel_threshold(image, orient='x', sobel_kernel=3, thresh=(2, 200))
 
     # Stretch the image out so we have a bird's-eye view of the scene
-    image = warp_image(image)
+    if warp:
+        image = warp_image(image)
 
     # Find the lanes, y goes from 0 to y-max, and left_lane_x and right_lane_x map the lanes
-    windows_image, lanes_image, coloured_image, combined_image, left_lane_x, right_lane_x, y = find_lanes(image)
+    if threshold:
+#        _, _, image, aimage, left_lane_x, right_lane_x, y = 
+        image = find_lanes(image, image)
 
+#    image = th_image #np.dstack((th_image, th_image, th_image))
+
+    return image, 0
+    
     # Find centre line x co-ords
     centre = [ int(l_x + r_x / 2) for l_x, r_x in zip(left_lane_x, right_lane_x) ]
 
@@ -392,7 +411,7 @@ def pipeline( image ):
     steer = centre[0]- centre[-1]
 
     # Return
-    return combined_image, steer
+    return image, steer
 
     # Update smoothed curve radius frame by frame, 20% each time
 #    if left_curverad and right_curverad:

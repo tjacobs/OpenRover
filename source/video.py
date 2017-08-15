@@ -56,10 +56,9 @@ def remote_connect():
     try:
         while not done:
             text = yield from websocket.recv()
+            #print( text )
             if text.startswith( 'left' ):
-                print( text )
                 left = (len(text.split()) > 1 and text.split()[1] == "down")
-                print( left )
             elif text.startswith( 'right' ):
                 right = (len(text.split()) > 1 and text.split()[1] == "down")
             elif text.startswith( 'up' ):

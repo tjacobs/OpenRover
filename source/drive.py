@@ -6,19 +6,19 @@
 #
 
 try:
-	import cv2
+    import cv2
 except:
-	print("No OpenCV installed.")
+    print("No OpenCV installed.")
 import camera
 import vision
 try:
-	from PIL import Image   
+    from PIL import Image   
 except:
-	print("No Pillow installed.")
+    print("No Pillow installed.")
 try:
-	import matplotlib.image as mpimg
+    import matplotlib.image as mpimg
 except:
-	print("No Matplotlib installed.")
+    print("No Matplotlib installed.")
 import sys
 import time
 import math
@@ -42,7 +42,7 @@ def display(string):
 # Frame processing steps
 def process(image):
     # Just put text over it
-    cv2.putText(image, "OpenRover", (10, 50), cv2.FONT_HERSHEY_SIMPLEX, 0.4, (155, 155, 255))
+    cv2.putText(image, "OpenRover", (10, 20), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (255, 155, 255))
     return image
 
 # Create window
@@ -50,7 +50,7 @@ def process(image):
 #cv2.moveWindow( "preview", 10, 10 )
 
 # Start camera
-camera.startCamera( (320, 240), 6 )
+camera.startCamera( (640, 480), 6 )
 
 # Open a sample image
 #frame = mpimg.imread('test_images/test1.jpg') 
@@ -63,6 +63,16 @@ frames_per_second = 0
 time_start = time.time()
 while True:
 
+    # Remote controls
+    if video.up:
+        vision.warp = True        
+    if video.down:
+        vision.warp = False
+    if video.right:
+        vision.threshold = True
+    if video.left:
+        vision.threshold = False
+    
     # Get a frame
     frame = camera.read()
 
@@ -77,13 +87,13 @@ while True:
 
     # Steer
     steer = min(max(steer/20, -1), 1)
-    display( "Steer: %0.1f\n" % steer)
+#    display( "Steer: %0.1f\n" % steer)
     motors.setPWM(2, steer)
     motors.runPWM(2)
 
     # Accellerate
     if int(i) % 10 == 0:
-        display("Jump forward!")
+#        display("Jump forward!")
         motors.setPWM(1, 0.56)
     else:
         motors.setPWM(1, 0.5)
@@ -98,7 +108,7 @@ while True:
     # Count frames per second
     frames_per_second += 1
     if( time.time() - time_start > 1.0 ):
-        print( "FPS: %.0f\n" % frames_per_second)
+#        print( "FPS: %.0f\n" % frames_per_second)
         #display("FPS: %.0f" % frames_per_second)
         frames_per_second = 0
         time_start = time.time()
