@@ -50,6 +50,7 @@ def process(image):
     cv2.putText(image, "FPS: {}".format(frames_per_second), (10, 40), cv2.FONT_HERSHEY_SIMPLEX, 0.4, (255, 195, 195))
     cv2.putText(image, "Steering: {0:.2f}".format(steering), (120, 20), cv2.FONT_HERSHEY_SIMPLEX, 0.4, (255, 195, 195))
     cv2.putText(image, "Acceleration: {0:.2f}".format(acceleration), (120, 40), cv2.FONT_HERSHEY_SIMPLEX, 0.4, (255, 195, 195))
+    cv2.putText(image, "Controls: w a s d".format(), (250, 20), cv2.FONT_HERSHEY_SIMPLEX, 0.4, (195, 195, 195))
     return image
 
 # Create window

@@ -1,6 +1,10 @@
 #!/bin/bash
 
 cd source
-sudo /home/debian/.virtualenv/py3/bin/python3 drive.py
-#sudo python3 drive.py
+
+# For Beagle Bone Blue:
+#sudo /home/debian/.virtualenv/py3/bin/python3 drive.py
+
+# For ODROID:
+sudo python3 drive.py
 
