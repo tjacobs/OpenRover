@@ -84,7 +84,10 @@ ffmpegProcess = None
 
 def send_frame(frame):
     global ffmpegProcess
-    ffmpegProcess.stdin.write(frame.tostring())
+    try:
+        ffmpegProcess.stdin.write(frame.tostring())
+    except:
+        pass
 
 # Start video transmission
 def video_function():
@@ -130,7 +133,7 @@ def video_function():
 
     # Pipe that pipe
     #while True:
-	#frame = Q.get()
+    #frame = Q.get()
         #ret, frame = cap.read()
         #if not ret:
         #    break

@@ -1,7 +1,6 @@
 # Drive.
 
-# The main file.
-# Run this to start the system.
+# The main file. Run this to start OpenRover.
 #
 #
 
@@ -82,18 +81,19 @@ while True:
     # Post process
     frame = process(frame)
 
-    # Pump this frame out so we can see it
+    # Pump this frame out so we can see it remotely
     video.send_frame(frame)
 
     # Steer
     steer = min(max(steer/20, -1), 1)
-#    display( "Steer: %0.1f\n" % steer)
+    display( "Steer: %0.1f\n" % steer)
     motors.setPWM(2, steer)
     motors.runPWM(2)
 
     # Accellerate
+    print(i)
     if int(i) % 10 == 0:
-#        display("Jump forward!")
+        display("Jump forward!")
         motors.setPWM(1, 0.56)
     else:
         motors.setPWM(1, 0.5)
@@ -108,13 +108,13 @@ while True:
     # Count frames per second
     frames_per_second += 1
     if( time.time() - time_start > 1.0 ):
-#        print( "FPS: %.0f\n" % frames_per_second)
+        print( "FPS: %.0f\n" % frames_per_second)
         #display("FPS: %.0f" % frames_per_second)
         frames_per_second = 0
         time_start = time.time()
 
     # Show
-#    cv2.imshow( "preview", processed_frame )
+ #   cv2.imshow( "preview", frame )
 
     # Esc key hit?
     #key = cv2.waitKey(20)

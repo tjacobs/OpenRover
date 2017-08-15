@@ -9,7 +9,6 @@ import glob
 # Options
 warp = False
 threshold = False
-detect_lanes = False
 
 # Globals
 M = None
@@ -149,6 +148,8 @@ def warp_image(image):
 # Find those lanes
 @timing
 def find_lanes(image, orig):
+    
+    windows_image = np.zeros_like(image)
 
     # Take a histogram of the bottom half of the image
     histogram = np.sum(image[int(image.shape[0]/2):, :], axis=0)
@@ -212,7 +213,7 @@ def find_lanes(image, orig):
         if len(good_right_inds) > minpix:        
             rightx_current = np.int(np.mean(nonzerox[good_right_inds]))
 
-    return orig
+#    return orig
     
     # Concatenate the arrays of indices
     left_lane_inds = np.concatenate(left_lane_inds)
@@ -224,7 +225,7 @@ def find_lanes(image, orig):
     rightx = nonzerox[right_lane_inds]
     righty = nonzeroy[right_lane_inds] 
 
-    return image
+ #   return image
 
     # Fit a second order polynomial to each
     try:
@@ -249,6 +250,8 @@ def find_lanes(image, orig):
     right_line_window2 = np.array([np.flipud(np.transpose(np.vstack([right_fitx+margin, ploty])))])
     right_line_pts = np.hstack((right_line_window1, right_line_window2))
 
+    new_image = np.dstack((image, image, image))*255
+
     # Create an output image to draw on and visualize the result. Colouring time. Colour the lanes.
     try:
         if windows_image is not None:
@@ -260,12 +263,11 @@ def find_lanes(image, orig):
     except:
         lanes_image = np.zeros_like(new_image)
 
-    new_image = np.dstack((image, image, image))*255
     coloured_image = np.zeros_like(new_image)
 
     # Draw the lane onto the warped blank image
-    cv2.fillPoly(coloured_image, np.int_([left_line_pts]), (255, 0, 0))
-    cv2.fillPoly(coloured_image, np.int_([right_line_pts]), (0, 0, 255))
+ #   cv2.fillPoly(coloured_image, np.int_([left_line_pts]), (255, 0, 0))
+  #  cv2.fillPoly(coloured_image, np.int_([right_line_pts]), (0, 0, 255))
 
     # Combine
     combined_image = cv2.addWeighted(new_image, 1, coloured_image, 1, 0)
@@ -397,12 +399,12 @@ def pipeline( image ):
 
     # Find the lanes, y goes from 0 to y-max, and left_lane_x and right_lane_x map the lanes
     if threshold:
-#        _, _, image, aimage, left_lane_x, right_lane_x, y = 
-        image = find_lanes(image, image)
+        _, _, bimage, aimage, left_lane_x, right_lane_x, y = find_lanes(image, image)
+#        image = find_lanes(image, image)
 
 #    image = th_image #np.dstack((th_image, th_image, th_image))
 
-    return image, 0
+#    return image, 0
     
     # Find centre line x co-ords
     centre = [ int(l_x + r_x / 2) for l_x, r_x in zip(left_lane_x, right_lane_x) ]

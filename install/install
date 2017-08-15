@@ -35,12 +35,12 @@ sudo pip3 install pillow
 sudo pip3 install rcpy
 sudo pip3 install imutils
 sudo pip3 install --ignore-installed moviepy
+sudo pip3 install pyserial
 
 #sudo pip install -q keyboard
 #sudo pip install -q picamera[array]
 #sudo pip install -q python_Xlib
 #sudo pip install -q pynput
-#sudo pip install -q pyserial
 #sudo pip install -q six
 #sudo pip install -q asyncio
 #sudo pip install -U socketIO-client
