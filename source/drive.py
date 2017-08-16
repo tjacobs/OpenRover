@@ -87,6 +87,9 @@ frame = cv2.imread('test_images/test1.jpg') # Use OpenCV instead if matplotlib i
 # Loop
 frames_per_second_so_far = 0
 time_start = time.time()
+#motors.setPWM(2, 0.0)
+#motors.startPWM(2, 0.01)
+lastPWM = 0
 while True:
 
     # Remote controls
@@ -101,7 +104,7 @@ while True:
            steering += 0.1
         
     # Slow down
-    acceleration *= 0.9
+    acceleration *= 0.5
     steering *= 0.9
 
     # Bonus controls
@@ -127,7 +130,7 @@ while True:
     video.send_frame(frame)
 
     # Output
-    steering = min(max(steering, -1.0), 1.0)
+    steering = min(max(steering, -0.35), 0.7)
     acceleration = min(max(acceleration, 0.0), 0.1)
     if differential:
         # Steer tank style
@@ -136,10 +139,14 @@ while True:
     else:
         # Steer Ackermann style
         motors.setPWM(2, steering)
-        motors.runPWM(2)
 
         # Accellerate
         motors.setPWM(1, acceleration+0.5)
+
+        if time.time() > lastPWM + 0.01:
+            motors.runPWM(1)
+            motors.runPWM(2)
+            lastPWM = time.time()
 
     # Save frame to disk to debug
 #    mpimg.imsave('out.png', frame) 

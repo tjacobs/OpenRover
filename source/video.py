@@ -20,6 +20,15 @@ else:
 
 Q = None
 
+def timing(f):
+    def wrap(*args):
+        time1 = time.time()
+        ret = f(*args)
+        time2 = time.time()
+        print( '%s %d ms' % (f.__name__, (time2-time1)*1000.0) )
+        return ret
+    return wrap
+
 # Export mouse x and y, and keyboard button press status
 left_mouse_down = False
 right_mouse_down = False
@@ -82,17 +91,16 @@ loop.call_soon_threadsafe(asyncio.async, remote_connect())
 
 ffmpegProcess = None
 
+frame_to_send = None
 def send_frame(frame):
     global ffmpegProcess
-    try:
-        ffmpegProcess.stdin.write(frame.tostring())
-    except:
-        pass
+    global frame_to_send
+    frame_to_send = frame
 
 # Start video transmission
 def video_function():
 
-    global Q, ffmpegProcess
+    global Q, ffmpegProcess, frame_to_send
 
     # Wake up raspi camera
     #os.system("sudo modprobe bcm2835-v4l2")
@@ -144,13 +152,17 @@ def video_function():
     ffmpegProcess = subprocess.Popen(shlex.split(commandLine), stdin=subprocess.PIPE, stderr=stderr, env=my_env)
     print( "Started ffmpeg" )
 
-    # Pipe that pipe
-    #while True:
-    #frame = Q.get()
+    # Pipe those frames out
+    while True:
+        try:
+            ffmpegProcess.stdin.write(frame_to_send.tostring())
+        except:
+            pass
+ 
+        #frame = Q.get()
         #ret, frame = cap.read()
         #if not ret:
         #    break
-        #ffmpegProcess.stdin.write(frame.tostring())
 
     #cap.release()
     #proc.stdin.close()
