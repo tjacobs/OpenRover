@@ -4,12 +4,31 @@
 #
 #
 
+# ------ Customisation Settings -------
+# Differential drive (two independent motors each side, like a tank), else Ackermann steering (steerable front wheels, like a car)
+differential = False
+# -------------
+
+import os
+import sys
+import time
+import math
+print("Starting OpenRover on " + str(os.uname()[1]))
+import camera
+if os.uname()[1] == "beaglebone":
+    camera.startCamera( (320, 240), 0 )
+else:
+    camera.startCamera( (640, 480), 6 )
+
+# Try importing what we need
 try:
     import cv2
 except:
     print("No OpenCV installed.")
-import camera
-import vision
+try:
+    import vision
+except:
+    print("No vision")
 try:
     from PIL import Image   
 except:
@@ -18,22 +37,18 @@ try:
     import matplotlib.image as mpimg
 except:
     print("No Matplotlib installed.")
-import sys
-import time
-import math
-import motors
-import video
-
-# ------ Customisation Settings -------
-# Which /dev/videoX number the camera appears as, usually 0
-videonum = 0
-
-# Differential drive (two independent motors each side like a tank), or Ackermann steering (steerable front wheels, like a car)
-differential = False
-# -------------
+try:
+    import motors
+except:
+    print("No motors.")
+video = None
+try:
+    import video
+except:
+    print("No video available.")
 
 # Calibrate ESC
-if not differential:
+if os.uname()[1] == "beaglebone":
     print( "Calibrating ESC." )
     motors.setPWM(1, 1.0)
     motors.startPWM(1, 0.01)
@@ -59,13 +74,10 @@ def process(image):
     cv2.putText(image, "Controls: w a s d".format(), (250, 20), cv2.FONT_HERSHEY_SIMPLEX, 0.4, (195, 195, 195))
     return image
 
-# Start camera
-camera.startCamera( (640, 480), videonum )
-
 # Open a test image
 #frame = mpimg.imread('test_images/test1.jpg') 
 #frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB) 
-#frame = cv2.imread('test_images/test1.jpg') # Use OpenCV instead if matplotlib is giving you trouble
+frame = cv2.imread('test_images/test1.jpg') # Use OpenCV instead if matplotlib is giving you trouble
 
 # Create window
 #cv2.namedWindow( "preview" )
@@ -77,14 +89,15 @@ time_start = time.time()
 while True:
 
     # Remote controls
-    if video.up:
-        acceleration += 0.1
-    if video.down:
-        acceleration -= 0.1
-    if video.right:
-        steering += 0.1
-    if video.left:
-        steering -= 0.1
+    if video:
+        if video.up:
+            acceleration += 0.1
+        if video.down:
+           acceleration -= 0.1
+        if video.right:
+           steering -= 0.1
+        if video.left:
+           steering += 0.1
         
     # Slow down
     acceleration *= 0.9
@@ -93,24 +106,24 @@ while True:
     # Bonus controls
     #if video.up:
     #    vision.warp = True        
-    if video.down:
-        vision.warp = False
+    #if video.down:
+    #    vision.warp = False
     #if video.right:
     #    vision.threshold = True
-    if video.left:
-        vision.threshold = False
+    #if video.left:
+    #    vision.threshold = False
     
     # Get a frame
     frame = camera.read()
 
     # Run through our machine vision pipeline
-    frame, vision_steering = vision.pipeline(frame)
+ #   frame, vision_steering = vision.pipeline(frame)
 
     # Post process
     frame = process(frame)
 
     # Pump this frame out so we can see it remotely
-    video.send_frame(frame)
+    #video.send_frame(frame)
 
     # Output
     steering = min(max(steering, -1.0), 1.0)
@@ -138,8 +151,9 @@ while True:
         frames_per_second = frames_per_second_so_far
         frames_per_second_so_far = 0
         time_start = time.time()
-
-    # Show frame
+    motors.display("FPS: {}".format(frames_per_second))
+    
+    # Show frame if we have a GUI
  #   cv2.imshow( "preview", frame )
 
     # Esc key hit?

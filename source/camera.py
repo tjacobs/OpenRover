@@ -39,6 +39,7 @@ def update():
         global Q, cap
 #       global frame
         while True:
+                #print( "Frame" )
                 # Otherwise, ensure the queue has room in it
                 if not Q.full():
                         # Read the next frame from the file
@@ -67,7 +68,7 @@ def startCamera(resolution, cam_number=0):
                         cap.set(3, resolution[0])
                         cap.set(4, resolution[1])
                         #cap.set(15, 0.1) # Exposure, not usually supported
-                        print("Started.")
+                        #print("Started.")
 
                 except:
                         print("Error starting cam")

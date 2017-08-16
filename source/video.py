@@ -127,15 +127,20 @@ def video_function():
     # From stdin:
     commandLine = 'ffmpeg -y -f rawvideo -vcodec rawvideo -s {dimension} -pix_fmt bgr24 -i - -an -video_size 640x480 -f mpegts -codec:v mpeg1video -b:v 200k -bf 0 http://meetzippy.com:8081/supersecret'.format(dimension=dimension)
 
-    print( commandLine )
-
+    # Config options
+    showCommandLine = True
     showOutput = True
 
     # Start
+    if showCommandLine:
+        print(commandLine)
     stderr = subprocess.PIPE
     if showOutput:
         stderr = None
-    ffmpegProcess = subprocess.Popen(shlex.split(commandLine), stdin=subprocess.PIPE) #, stderr=stderr)
+    my_env = os.environ.copy()
+    #my_env["LD_PRELOAD"] = "/usr/lib/uv4l/uv4lext/armv6l/libuv4lext.so"
+    my_env["LD_LIBRARY_PATH"] = "/usr/local/lib"
+    ffmpegProcess = subprocess.Popen(shlex.split(commandLine), stdin=subprocess.PIPE, stderr=stderr, env=my_env)
     print( "Started ffmpeg" )
 
     # Pipe that pipe
