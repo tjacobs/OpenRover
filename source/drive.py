@@ -71,7 +71,7 @@ def process(image):
     cv2.putText(image, "FPS: {}".format(frames_per_second), (10, 40), cv2.FONT_HERSHEY_SIMPLEX, 0.4, (255, 195, 195))
     cv2.putText(image, "Steering: {0:.2f}".format(steering), (120, 20), cv2.FONT_HERSHEY_SIMPLEX, 0.4, (255, 195, 195))
     cv2.putText(image, "Acceleration: {0:.2f}".format(acceleration), (120, 40), cv2.FONT_HERSHEY_SIMPLEX, 0.4, (255, 195, 195))
-    cv2.putText(image, "Controls: w a s d".format(), (250, 20), cv2.FONT_HERSHEY_SIMPLEX, 0.4, (195, 195, 195))
+    cv2.putText(image, "Controls: w a s d".format(), (10, 60), cv2.FONT_HERSHEY_SIMPLEX, 0.4, (195, 195, 195))
     return image
 
 # Open a test image
@@ -117,17 +117,17 @@ while True:
     frame = camera.read()
 
     # Run through our machine vision pipeline
- #   frame, vision_steering = vision.pipeline(frame)
+    #frame, vision_steering = vision.pipeline(frame)
 
     # Post process
     frame = process(frame)
 
     # Pump this frame out so we can see it remotely
-    #video.send_frame(frame)
+    video.send_frame(frame)
 
     # Output
     steering = min(max(steering, -1.0), 1.0)
-    acceleration = min(max(acceleration, -1.0), 1.0)
+    acceleration = min(max(acceleration, 0.0), 0.1)
     if differential:
         # Steer tank style
         motors.setPWM(1, acceleration + steering)
@@ -138,7 +138,7 @@ while True:
         motors.runPWM(2)
 
         # Accellerate
-        motors.setPWM(1, acceleration)
+        motors.setPWM(1, acceleration+0.5)
 
     # Save frame to disk to debug
 #    mpimg.imsave('out.png', frame) 
