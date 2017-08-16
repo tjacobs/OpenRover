@@ -24,8 +24,16 @@ import math
 import motors
 import video
 
+# ------ Customisation Settings -------
+# Which /dev/videoX number the camera appears as, usually 0
+videonum = 0
+
+# Differential drive (two independent motors each side like a tank), or Ackermann steering (steerable front wheels, like a car)
+differential = False
+# -------------
+
 # Calibrate ESC
-if False:
+if not differential:
     print( "Calibrating ESC." )
     motors.setPWM(1, 1.0)
     motors.startPWM(1, 0.01)
@@ -36,13 +44,11 @@ if False:
     time.sleep(.5)
 
 # Our outputs
-differential = True # Differential drive (two independently powered motors each side like a tank), or Ackermann steering (angled front wheels, like a car)
 steering = 0.0
 acceleration = 0.0
 
 # Video frame post-processing step
 frames_per_second = 0
-frames_per_second_so_far = 0
 def process(image):
     # Just put text over it
     global frames_per_second, steering, acceleration
@@ -53,20 +59,20 @@ def process(image):
     cv2.putText(image, "Controls: w a s d".format(), (250, 20), cv2.FONT_HERSHEY_SIMPLEX, 0.4, (195, 195, 195))
     return image
 
-# Create window
-#cv2.namedWindow( "preview" )
-#cv2.moveWindow( "preview", 10, 10 )
-
 # Start camera
-camera.startCamera( (640, 480), 6 )
+camera.startCamera( (640, 480), videonum )
 
 # Open a test image
 #frame = mpimg.imread('test_images/test1.jpg') 
 #frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB) 
 #frame = cv2.imread('test_images/test1.jpg') # Use OpenCV instead if matplotlib is giving you trouble
 
+# Create window
+#cv2.namedWindow( "preview" )
+#cv2.moveWindow( "preview", 10, 10 )
+
 # Loop
-i = 0.0
+frames_per_second_so_far = 0
 time_start = time.time()
 while True:
 

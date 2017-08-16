@@ -5,6 +5,7 @@ import functions
 
 # Import Beagle Bone Blue robot motor controller if present
 try:
+    import rcpy
     import rcpy.servo as servo
     from rcpy.servo import esc1
     from rcpy.servo import servo2
@@ -13,11 +14,12 @@ except:
     pass
 
 # Import flight controller motor controller if present
-try:
-    from controller_board import MultiWii
-except:
-    print("No controller board found.")
-    pass
+if not rcpy:
+    try:
+        from controller_board import MultiWii
+    except:
+        print("No controller board found.")
+        pass
 
 # Single line display function
 def display(string):
@@ -147,19 +149,22 @@ number1 = 0
 number2 = 0
 def setPWM(number, value):
     global number1, number2
-    try:
-        duty = value 
+    if rcpy:
+        try:
+            if number == 1:
+                #display( "Setting speed: " + str(value) )
+                esc1.set(value)
+            elif number == 2:
+                #display( "Setting steering: " + str(value) )
+                servo2.set(value)
+        except:
+            pass
+    else:
         if number == 1:
             number1 = value
-            #display( "Setting speed: " + str(duty) )
-            esc1.set(duty)
         elif number == 2:
             number2 = value
-            #display( "Setting steering: " + str(duty) )
-            servo2.set(duty)
-    except:
-        pass
-    sendMotorCommands([0, 100.0 * number1, 100.0 * number2], False)
+        sendMotorCommands([0, 100.0 * number1, 100.0 * number2], False)
 
 def servosOff():
     try:

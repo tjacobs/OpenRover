@@ -127,8 +127,15 @@ def video_function():
     # From stdin:
     commandLine = 'ffmpeg -y -f rawvideo -vcodec rawvideo -s {dimension} -pix_fmt bgr24 -i - -an -video_size 640x480 -f mpegts -codec:v mpeg1video -b:v 200k -bf 0 http://meetzippy.com:8081/supersecret'.format(dimension=dimension)
 
+    print( commandLine )
+
+    showOutput = True
+
     # Start
-    ffmpegProcess = subprocess.Popen(shlex.split(commandLine), stdin=subprocess.PIPE, stderr=subprocess.PIPE)
+    stderr = subprocess.PIPE
+    if showOutput:
+        stderr = None
+    ffmpegProcess = subprocess.Popen(shlex.split(commandLine), stdin=subprocess.PIPE) #, stderr=stderr)
     print( "Started ffmpeg" )
 
     # Pipe that pipe
