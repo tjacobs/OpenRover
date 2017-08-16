@@ -390,16 +390,16 @@ def pipeline( image ):
  
     # Threshold the image to make the line edges stand out
 #    image = threshold(image)
-    #if threshold:
-    #    image = sobel_threshold(image, orient='x', sobel_kernel=3, thresh=(2, 200))
+    if threshold:
+        image = sobel_threshold(image, orient='x', sobel_kernel=3, thresh=(2, 200))
 
     # Stretch the image out so we have a bird's-eye view of the scene
     if warp:
         image = warp_image(image)
 
     # Find the lanes, y goes from 0 to y-max, and left_lane_x and right_lane_x map the lanes
-    #if threshold:
-    #    _, _, bimage, aimage, left_lane_x, right_lane_x, y = find_lanes(image, image)
+#    if threshold:
+#        _, _, vimage, aimage, left_lane_x, right_lane_x, y = find_lanes(image, image)
 #        image = find_lanes(image, image)
 
 #    image = th_image #np.dstack((th_image, th_image, th_image))
@@ -413,7 +413,7 @@ def pipeline( image ):
     steer = centre[0]- centre[-1]
 
     # Return
-    return image, steer
+    return image, steer / 20
 
     # Update smoothed curve radius frame by frame, 20% each time
 #    if left_curverad and right_curverad:

@@ -102,26 +102,26 @@ while True:
            steering -= 0.1
         if video.left:
            steering += 0.1
-        
+
+        # Bonus controls
+        if video.up:
+            vision.warp = True        
+        if video.down:
+            vision.warp = False
+        if video.right:
+            vision.threshold = True
+        if video.left:
+            vision.threshold = False
+    
     # Slow down
     acceleration *= 0.5
     steering *= 0.9
-
-    # Bonus controls
-    #if video.up:
-    #    vision.warp = True        
-    #if video.down:
-    #    vision.warp = False
-    #if video.right:
-    #    vision.threshold = True
-    #if video.left:
-    #    vision.threshold = False
     
     # Get a frame
     frame = camera.read()
 
     # Run through our machine vision pipeline
-    #frame, vision_steering = vision.pipeline(frame)
+    frame, vision_steering = vision.pipeline(frame)
 
     # Post process
     frame = process(frame)
@@ -130,7 +130,7 @@ while True:
     video.send_frame(frame)
 
     # Output
-    steering = min(max(steering, -0.35), 0.7)
+    steering = min(max(steering + vision_steering, -0.35), 0.7)
     acceleration = min(max(acceleration, 0.0), 0.1)
     if differential:
         # Steer tank style
