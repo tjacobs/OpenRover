@@ -1,3 +1,11 @@
+# OpenRover.
+# Camera.
+# 
+# Deals with the USB webcam or Pi Camera.
+# Provides an interface for starting the camera and reading frames.
+# Runs its own thread so it doesn't slow down your main thread.
+#
+
 import time
 import sys
 import cv2
@@ -15,16 +23,18 @@ try:
 except:
         pass
 
+# Variables
 rawCapture = None
 picamera = None
 cap = None
 Q = None
-#frame = None
+frame = None
 
+# Read a frame from the camera
 def read():
-        # return next frame in the queue
+        # Return next frame in the queue
         global Q
-        frame = Q.get()
+        #frame = Q.get()
 
         # Get most recent
         #new_frame = Q.get()
@@ -32,12 +42,12 @@ def read():
         #    frame = new_frame
         #    new_frame = Q.get()
 
-        #global frame
+        global frame
         return frame
 
 def update():
         global Q, cap
-#       global frame
+        global frame
         while True:
                 #print( "Frame" )
                 # Otherwise, ensure the queue has room in it
@@ -49,7 +59,7 @@ def update():
                                 return
  
                         # Add the frame to the queue
-                        Q.put(frame)
+                        #Q.put(frame)
 
 def startCamera(resolution, cam_number=0):
         global rawCapture, picamera, cap, Q
