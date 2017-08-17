@@ -49,7 +49,6 @@ def update():
 	    # Read that frame
             #print( "Read camera frame" )
             (grabbed, frame) = cap.read()
-            #print( grabbed )
             #if not grabbed:
             #    return
                 
@@ -83,7 +82,7 @@ def startCamera(resolution, cam_number=0):
                     except:
                         print("Error starting camera.")
                         pass 
-                if True: #os.uname()[1] == "beaglebone": 
+                if True: 
                     cap.set(3, resolution[0])
                     cap.set(4, resolution[1])
                     #cap.set(15, 0.1) # Exposure, not usually supported

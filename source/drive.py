@@ -163,9 +163,9 @@ while True:
     #cv2.imshow( "preview", frame )
 
     # Esc key hit?
-    key = cv2.waitKey(20)
-    if key == 27:
-        break
+#    key = cv2.waitKey(20)
+#    if key == 27:
+#        break
 
 # Close and finish
 cv2.destroyWindow( "preview" )
