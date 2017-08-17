@@ -1,13 +1,18 @@
 ## OpenRover
-### A Simple Self Driving Car.
+### A Simple Self Driving Car System.
 
-Currently runs on Beagle Bone Blue, Raspberry Pi 3, and ODROID XU4.
+OpenRover runs on Beagle Bone Blue, a Raspberry Pi 3, or an ODROID XU4.
 
-It's designed for small scale RC cars. It uses a webcam or Pi Cam and OpenCV machine vision to see the lane lines and steer the car. 
+It's designed for small scale RC cars. It uses a webcam or Pi Cam and OpenCV to detect lane lines and steer. 
 
 [Overview and context of the project](https://medium.com/australian-robotics-society/self-racing-cars-down-under-d6223af4fad0).
 
 [How to build your own](https://medium.com/australian-robotics-society/build-your-own-self-racing-car-4204b30dc4d0).
+
+[Example of it running](https://www.instagram.com/p/BXrkQCCB8Qa/?taken-by=australianroboticssociety).
+
+[Example of it driving](https://www.instagram.com/p/BX2N8v0BVw8/?taken-by=australianroboticssociety).
+
 
 # Installation
 
@@ -24,5 +29,5 @@ To start driving, run this.
 ```
 
 # Development
-A TensorFlow trained neural network is the next step.
+Currently broadcasts to http://meetzippy.com, where you can turn on and off various OpenCV methods.
 
