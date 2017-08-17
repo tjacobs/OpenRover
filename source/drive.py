@@ -10,34 +10,42 @@
 differential = False
 # -------------
 
+# The basics
 import os
 import sys
 import time
 import math
+
+# Start camera
 print("Starting OpenRover on " + str(os.uname()[1]))
 import camera
+resolution = (640, 480)
+video_number = 0
 if os.uname()[1] == "beaglebone":
-    camera.startCamera( (320, 240), 0 )
-else:
-    camera.startCamera( (640, 480), 6 )
+    resolution = (320, 240)
+    video_number = 0
+elif os.uname()[1] == "odroid":
+    resolution = (640, 480)
+    video_number = 7
+camera.startCamera(resolution, video_number)
 
 # Try importing what we need
 try:
     import cv2
 except:
-    print("No OpenCV installed.")
+    print("No OpenCV.")
 try:
     import vision
 except:
-    print("No vision")
+    print("No vision.")
 try:
     from PIL import Image   
 except:
-    print("No Pillow installed.")
+    print("No Pillow.")
 try:
     import matplotlib.image as mpimg
 except:
-    print("No Matplotlib installed.")
+    pass
 try:
     import motors
 except:
@@ -46,10 +54,10 @@ video = None
 try:
     import video
 except:
-    print("No video available.")
+    print("No video.")
 
-# Calibrate ESC
-if os.uname()[1] == "beaglebone":
+# Calibrate ESC if it's just the one
+if not differential:
     print( "Calibrating ESC." )
     motors.setPWM(1, 1.0)
     motors.startPWM(1, 0.01)
@@ -76,9 +84,7 @@ def process(image):
     return image
 
 # Open a test image
-#frame = mpimg.imread('test_images/test1.jpg') 
-#frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB) 
-frame = cv2.imread('test_images/test1.jpg') # Use OpenCV instead if matplotlib is giving you trouble
+frame = cv2.imread('test_images/test1.jpg')
 
 # Create window
 #cv2.namedWindow( "preview" )
@@ -87,8 +93,6 @@ frame = cv2.imread('test_images/test1.jpg') # Use OpenCV instead if matplotlib i
 # Loop
 frames_per_second_so_far = 0
 time_start = time.time()
-#motors.setPWM(2, 0.0)
-#motors.startPWM(2, 0.01)
 lastPWM = 0
 while True:
 
@@ -103,16 +107,6 @@ while True:
         if video.left:
            steering += 0.1
 
-        # Bonus controls
-        if video.up:
-            vision.warp = True        
-        if video.down:
-            vision.warp = False
-        if video.right:
-            vision.threshold = True
-        if video.left:
-            vision.threshold = False
-    
     # Slow down
     acceleration *= 0.5
     steering *= 0.9
@@ -121,7 +115,8 @@ while True:
     frame = camera.read()
 
     # Run through our machine vision pipeline
-    frame, vision_steering = vision.pipeline(frame)
+    vision_steering = 0
+    #frame, vision_steering = vision.pipeline(frame)
 
     # Post process
     frame = process(frame)
@@ -131,7 +126,7 @@ while True:
 
     # Output
     steering = min(max(steering + vision_steering, -0.35), 0.7)
-    acceleration = min(max(acceleration, 0.0), 0.1)
+    acceleration = min(max(acceleration, -0.1), 0.1)
     if differential:
         # Steer tank style
         motors.setPWM(1, acceleration + steering)
@@ -143,15 +138,18 @@ while True:
         # Accellerate
         motors.setPWM(1, acceleration+0.5)
 
+        # Send the PWM pulse at most every 10ms
         if time.time() > lastPWM + 0.01:
             motors.runPWM(1)
             motors.runPWM(2)
             lastPWM = time.time()
 
     # Save frame to disk to debug
-#    mpimg.imsave('out.png', frame) 
-#    img = Image.open('out.png')
-#    img.show()
+    if False:
+        cv2.imwrite('out.png', frame) 
+        img = Image.open('out.png')
+        img.show()
+        break
 
     # Count frames per second
     frames_per_second_so_far += 1
@@ -162,16 +160,17 @@ while True:
     motors.display("FPS: {}".format(frames_per_second))
     
     # Show frame if we have a GUI
- #   cv2.imshow( "preview", frame )
+    #cv2.imshow( "preview", frame )
 
     # Esc key hit?
-    #key = cv2.waitKey(20)
-    #if key == 27:
-    #    break
+    key = cv2.waitKey(20)
+    if key == 27:
+        break
 
-# Close
-#cv2.destroyWindow( "preview" )
+# Close and finish
+cv2.destroyWindow( "preview" )
 camera.stopCamera()
 motors.servosOff()
-
+motors.stopMotors()
+print("OpenRover stopped.")
 

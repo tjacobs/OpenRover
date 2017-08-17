@@ -19,6 +19,7 @@ else:
         from Queue import Queue
 
 Q = None
+resolution = (640, 480)
 
 def timing(f):
     def wrap(*args):
@@ -124,8 +125,8 @@ def video_function():
         dimension = '{}x{}'.format(width, height)
         fps = str(cap.get(cv2.CAP_PROP_FPS))
     else:
-        dimension = '320x240'
-#        dimension = '640x480'
+#        dimension = '320x240'
+        dimension = '640x480'
 
     # With sound:
 #    commandLine = 'ffmpeg -loglevel error -f alsa -ar 44100 -ac 1 -i hw:1 -f mpegts -codec:a mp2 -f v4l2 -framerate 30 -video_size 640x480 -i /dev/video0 -f mpegts -codec:v mpeg1video -s 640x480 -b:v 200k -bf 0 -muxdelay 0.001 http://meetzippy.com:8081/supersecret'
@@ -137,8 +138,8 @@ def video_function():
     commandLine = 'ffmpeg -y -f rawvideo -vcodec rawvideo -s {dimension} -pix_fmt bgr24 -i - -an -f mpegts -codec:v mpeg1video -b:v 500k -bf 0 http://meetzippy.com:8081/supersecret'.format(dimension=dimension)
 
     # Config options
-    showCommandLine = True
-    showOutput = True
+    showCommandLine = False
+    showOutput = False
 
     # Start
     if showCommandLine:
@@ -150,7 +151,6 @@ def video_function():
     #my_env["LD_PRELOAD"] = "/usr/lib/uv4l/uv4lext/armv6l/libuv4lext.so"
     my_env["LD_LIBRARY_PATH"] = "/usr/local/lib"
     ffmpegProcess = subprocess.Popen(shlex.split(commandLine), stdin=subprocess.PIPE, stderr=stderr, env=my_env)
-    print( "Started ffmpeg" )
 
     # Pipe those frames out
     while True:

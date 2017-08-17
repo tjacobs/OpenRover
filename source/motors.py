@@ -1,17 +1,20 @@
 import time
 import sys
+import os
 import math
 import functions
 
 # Import Beagle Bone Blue robot motor controller if present
-try:
-    import rcpy
-    import rcpy.servo as servo
-    from rcpy.servo import esc1
-    from rcpy.servo import servo2
-except:
-    print("No rcpy installed.")
-    pass
+rcpy = None
+if os.uname()[1] == "beaglebone":
+    try:
+        import rcpy
+        import rcpy.servo as servo
+        from rcpy.servo import esc1
+        from rcpy.servo import servo2
+    except:
+        print("No rcpy.")
+        pass
 
 # Import flight controller motor controller if present
 if not rcpy:
@@ -37,7 +40,7 @@ def initMotors():
             board = MultiWii("/dev/ttyUSB0")
         except:
             try:
-                board = MultiWii("/dev/ttyACM0")
+                board = MultiWii("/dev/ttyACM2")
             except:
                 print( "\nError: Cannot access USB motors." )
                 sys.stdout.flush()

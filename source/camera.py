@@ -1,5 +1,5 @@
 # OpenRover.
-# Camera.
+# Camera.py
 # 
 # Deals with the USB webcam or Pi Camera.
 # Provides an interface for starting the camera and reading frames.
@@ -7,6 +7,7 @@
 #
 
 import time
+import os
 import sys
 import cv2
 from threading import Thread
@@ -33,37 +34,39 @@ frame = None
 # Read a frame from the camera
 def read():
         # Return next frame in the queue
-        global Q
+        #global Q
         #frame = Q.get()
-
-        # Get most recent
-        #new_frame = Q.get()
-        #while new_frame is not None:
-        #    frame = new_frame
-        #    new_frame = Q.get()
-
+	
+	# Just return the current frame
         global frame
         return frame
 
 def update():
-        global Q, cap
+        #global Q 
+        global cap
         global frame
         while True:
-                #print( "Frame" )
-                # Otherwise, ensure the queue has room in it
-                if not Q.full():
-                        # Read the next frame from the file
-                        (grabbed, frame) = cap.read()
- 
-                        if not grabbed:
-                                return
- 
-                        # Add the frame to the queue
-                        #Q.put(frame)
+	    # Read that frame
+            #print( "Read camera frame" )
+            (grabbed, frame) = cap.read()
+            #print( grabbed )
+            #if not grabbed:
+            #    return
+                
+            # Ensure the queue has room in it
+            #if not Q.full():
+                # Read the next frame from the file
+                #(grabbed, frame) = cap.read()
+                #if not grabbed:
+                #        return
+                # Add the frame to the queue
+                #Q.put(frame)
 
 def startCamera(resolution, cam_number=0):
         global rawCapture, picamera, cap, Q
-
+	
+        # First try Pi camera
+        print("Starting camera.")
         try:
                 picamera = PiCamera()
                 picamera.resolution = resolution
@@ -73,18 +76,20 @@ def startCamera(resolution, cam_number=0):
 
                 # Try regular USB webcam
                 try:
-                        print("Starting webcam capture.")
-                        cap = cv2.VideoCapture(cam_number)
-                        cap.set(3, resolution[0])
-                        cap.set(4, resolution[1])
-                        #cap.set(15, 0.1) # Exposure, not usually supported
-                        #print("Started.")
-
+                    cap = cv2.VideoCapture(cam_number)
                 except:
-                        print("Error starting cam")
+                    try:
+                        cap = cv2.VideoCapture(cam_number+1)
+                    except:
+                        print("Error starting camera.")
+                        pass 
+                if True: #os.uname()[1] == "beaglebone": 
+                    cap.set(3, resolution[0])
+                    cap.set(4, resolution[1])
+                    #cap.set(15, 0.1) # Exposure, not usually supported
 
         # Start thread
-        Q = Queue(maxsize=128)
+        #Q = Queue(maxsize=128)
         t = Thread(target=update, args=())
         t.daemon = True
         t.start()
