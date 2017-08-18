@@ -6,7 +6,7 @@ import glob
 
 # Options
 warp_on = False
-threshold_on = False
+threshold_on = True
 
 # Globals
 M = None
@@ -272,6 +272,133 @@ def find_lanes(image, orig):
 
     return windows_image, lanes_image, coloured_image, combined_image, left_fitx, right_fitx, ploty
 
+
+# Find those lanes
+@timing
+def find_lane_curves(image, orig):
+    
+    windows_image = np.zeros_like(image)
+
+    # Take a histogram of the bottom half of the image
+    histogram = np.sum(image[int(image.shape[0]/2):, :], axis=0)
+
+    # Find the peak of the left and right halves of the histogram
+    # These will be the starting point for the left and right lines
+    midpoint = np.int(histogram.shape[0]/2)
+    leftx_base = np.argmax(histogram[:midpoint])
+    rightx_base = np.argmax(histogram[midpoint:]) + midpoint
+
+    # Choose the number of sliding windows
+    nwindows = 5
+
+    # Set height of windows
+    window_height = np.int(image.shape[0]/nwindows)
+
+    # Identify the x and y positions of all nonzero pixels in the image
+    nonzero = image.nonzero()
+    nonzeroy = np.array(nonzero[0])
+    nonzerox = np.array(nonzero[1])
+
+    # Current positions to be updated for each window
+    leftx_current = leftx_base
+    rightx_current = rightx_base
+
+    # Set the width of the windows +/- margin
+    margin = 20
+
+    # Set minimum number of pixels found to recenter window
+    minpix = 2
+
+    # Create empty lists to receive left and right lane pixel indices
+    left_lane_inds = []
+    right_lane_inds = []
+
+    # Step through the windows one by one
+    for window in range(nwindows):
+        # Identify window boundaries in x and y (and right and left)
+        win_y_low = image.shape[0] - (window+1)*window_height
+        win_y_high = image.shape[0] - window*window_height
+        win_xleft_low = leftx_current - margin
+        win_xleft_high = leftx_current + margin
+        win_xright_low = rightx_current - margin
+        win_xright_high = rightx_current + margin
+
+        # Draw the windows on the visualization image
+        cv2.rectangle(orig, (win_xleft_low, win_y_low), (win_xleft_high, win_y_high), (255, 255, 0), 2)
+        cv2.rectangle(orig, (win_xright_low, win_y_low), (win_xright_high, win_y_high), (255, 255, 0), 2)
+
+        # Identify the nonzero pixels in x and y within the window
+        good_left_inds = ((nonzeroy >= win_y_low) & (nonzeroy < win_y_high) & (nonzerox >= win_xleft_low) & (nonzerox < win_xleft_high)).nonzero()[0]
+        good_right_inds = ((nonzeroy >= win_y_low) & (nonzeroy < win_y_high) & (nonzerox >= win_xright_low) & (nonzerox < win_xright_high)).nonzero()[0]
+
+        # Append these indices to the lists
+        left_lane_inds.append(good_left_inds)
+        right_lane_inds.append(good_right_inds)
+
+        # If you found > minpix pixels, recenter next window on their mean position
+        if len(good_left_inds) > minpix:
+            leftx_current = np.int(np.mean(nonzerox[good_left_inds]))
+        if len(good_right_inds) > minpix:        
+            rightx_current = np.int(np.mean(nonzerox[good_right_inds]))
+
+    # Concatenate the arrays of indices
+    left_lane_inds = np.concatenate(left_lane_inds)
+    right_lane_inds = np.concatenate(right_lane_inds)
+
+    # Extract left and right line pixel positions
+    leftx = nonzerox[left_lane_inds]
+    lefty = nonzeroy[left_lane_inds] 
+    rightx = nonzerox[right_lane_inds]
+    righty = nonzeroy[right_lane_inds] 
+
+    # Fit a second order polynomial to each
+    try:
+        left_fit = np.polyfit(lefty, leftx, 2)
+    except:
+        left_fit = [0,0,0]
+    try:
+        right_fit = np.polyfit(righty, rightx, 2)
+    except:
+        right_fit = [0,0,0]
+
+    # Generate x and y values for plotting
+    ploty = np.linspace(0, image.shape[0]-1, image.shape[0] )
+    left_fitx = left_fit[0]*ploty**2 + left_fit[1]*ploty + left_fit[2]
+    right_fitx = right_fit[0]*ploty**2 + right_fit[1]*ploty + right_fit[2]
+
+    # Make left and right line points for polygon
+    left_line_window1 = np.array([np.transpose(np.vstack([left_fitx-margin, ploty]))])
+    left_line_window2 = np.array([np.flipud(np.transpose(np.vstack([left_fitx+margin, ploty])))])
+    left_line_pts = np.hstack((left_line_window1, left_line_window2))
+    right_line_window1 = np.array([np.transpose(np.vstack([right_fitx-margin, ploty]))])
+    right_line_window2 = np.array([np.flipud(np.transpose(np.vstack([right_fitx+margin, ploty])))])
+    right_line_pts = np.hstack((right_line_window1, right_line_window2))
+
+    # New image
+    new_image = np.dstack((image, image, image))*255
+
+    # Create an output image to draw on and visualize the result. Colouring time. Colour the lanes.
+    try:
+        if windows_image is not None:
+            lanes_image = np.dstack((image, windows_image, image))*255
+            lanes_image[nonzeroy[left_lane_inds], nonzerox[left_lane_inds]] = [255, 0, 0]
+            lanes_image[nonzeroy[right_lane_inds], nonzerox[right_lane_inds]] = [0, 0, 255]
+        else:
+            lanes_image = np.zeros_like(new_image)
+    except:
+        lanes_image = np.zeros_like(new_image)
+
+    coloured_image = np.zeros_like(new_image)
+
+    # Draw the lane onto the warped blank image
+ #   cv2.fillPoly(coloured_image, np.int_([left_line_pts]), (255, 0, 0))
+  #  cv2.fillPoly(coloured_image, np.int_([right_line_pts]), (0, 0, 255))
+
+    # Combine
+    combined_image = cv2.addWeighted(new_image, 1, coloured_image, 1, 0)
+
+    return combined_image, left_fitx, right_fitx, ploty
+
 # Fit those curves
 ym_per_pix = 30 / 1440 # meters per pixel in y dimension (height of warped image)
 xm_per_pix = 3.7 / 740 # meters per pixel in x dimension (midpoint in road, 740-540 = 200. (200 + 1280) / 2 = 740 )
@@ -396,23 +523,32 @@ def pipeline( image ):
         image = warp_image(image)
 
     # Find the lanes, y goes from 0 to y-max, and left_lane_x and right_lane_x map the lanes
-#    if threshold_on:
-#        _, _, vimage, aimage, left_lane_x, right_lane_x, y = find_lanes(image, image)
-#        image = find_lanes(image, image)
+    if threshold_on:
+        #_, _, vimage, aimage, left_lane_x, right_lane_x, y = find_lanes(image, image)
+        image_found, left_lane_x, right_lane_x, y = find_lane_curves(image, image)
+        centre_line_x = [ int(l_x + r_x / 2) for l_x, r_x in zip(left_lane_x, right_lane_x) ]
 
-#    image = th_image #np.dstack((th_image, th_image, th_image))
+        # Find the centre line curve shape in the edge detected image
+        #centre_line_x, y = find_centre_line_curve(image)
 
-    return image, 0
+    # Take the bottom of the centre line, and the top of it, and steer that way
+    steer = (centre_line_x[0]- centre_line_x[-1]) / 20
+    steer = min(max(steer, -1), 1)
+
+    # Calculate speed from how confident we are with our steering nad how straight it is
+    speed = min(max(0, 20 - abs(steer)/4)/20, 1)
+
+    # Draw those lines
+#    image_out = draw_lanes(image, image, image, left_lane_x, right_lane_x, y, steer, speed)
+
+    # Return the image and steering command
+    return image, steer, speed
+
+
+
+
+# Bonus code
     
-    # Find centre line x co-ords
-    centre = [ int(l_x + r_x / 2) for l_x, r_x in zip(left_lane_x, right_lane_x) ]
-
-    # After all that, just take the bottom of the centre line, and the top of it, and steer that way
-    steer = centre[0]- centre[-1]
-
-    # Return
-    return image, steer / 20
-
     # Update smoothed curve radius frame by frame, 20% each time
 #    if left_curverad and right_curverad:
 #        curve_radius = (left_curverad + right_curverad) / 2
@@ -433,9 +569,4 @@ def pipeline( image ):
 #    else:
 #        steering_position += ( (new_steering_position - steering_position) / 20 )
 
-    # Test speed
-#    speed = max(0, 20 - abs(steering_position)/4)
-
-    # Draw those lines
-    #image_out = draw_lanes(image, processed_image, lanes_image, left_fitx, right_fitx, ploty, steering_position, speed)
  

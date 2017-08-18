@@ -17,7 +17,8 @@ if os.uname()[1] == "beaglebone":
     resolution = (320, 240)
     video_number = 0
 elif os.uname()[1] == "odroid":
-    resolution = (640, 480)
+    resolution = (320, 240)  # Getting about 8 FPS
+#    resolution = (640, 480) # Getting about 2 FPS
     video_number = 6
 
 # -----------------------
@@ -58,6 +59,7 @@ except:
 video = None
 try:
     import video
+    video.resolution = resolution
 except:
     print("No video.")
 
@@ -99,6 +101,7 @@ frames_per_second_so_far = 0
 time_start = time.time()
 lastPWM = 0
 vision_steering = 0
+vision_speed = 0
 sys.stdout.flush()
 while not keys or not keys.esc_key_pressed:
     # Remote controls
@@ -120,7 +123,7 @@ while not keys or not keys.esc_key_pressed:
     frame = camera.read()
 
     # Run through our machine vision pipeline
-    frame, vision_steering = vision.pipeline(frame)
+    frame, vision_steering, vision_speed = vision.pipeline(frame)
 
     # Post process
     frame = process(frame)
@@ -130,7 +133,7 @@ while not keys or not keys.esc_key_pressed:
 
     # Output
     steering = min(max(steering + vision_steering, -0.7), 0.9)
-    acceleration = min(max(acceleration, -0.1), 0.1)
+    acceleration = min(max(acceleration, -0.1), 0.3)
     if differential:
         # Steer tank style
         motors.setPWM(1, acceleration + steering)

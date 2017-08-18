@@ -3,6 +3,7 @@
 
 # Remote.
 # Allows you to control it from a website.
+
 import sys
 import os
 import shlex
@@ -16,8 +17,8 @@ import cv2
 # Config options
 showCommandLine = False
 showOutput = False
-resolution = (640, 480)
-bitrate = 50 #kbps. 500 is good for 640x380 over the internet.
+resolution = (320, 240)
+bitrate = 50 #kbps. 500 is good for 640x480 over the internet.
 
 # Export mouse x and y, and keyboard button press status
 left_mouse_down = False
@@ -100,9 +101,9 @@ def video_function():
     
     # Stop ffmpeg
     os.system("sudo killall -9 ffmpeg 2> /dev/null")
-   
-#   dimension = '320x240'
-    dimension = '640x480'
+
+    # Set resolution
+    dimension = '{}x{}'.format(resolution[0], resolution[1])
 
     # With sound:
 #    commandLine = 'ffmpeg -loglevel error -f alsa -ar 44100 -ac 1 -i hw:1 -f mpegts -codec:a mp2 -f v4l2 -framerate 30 -video_size 640x480 -i /dev/video0 -f mpegts -codec:v mpeg1video -s 640x480 -b:v 200k -bf 0 -muxdelay 0.001 http://meetzippy.com:8081/supersecret'
