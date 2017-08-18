@@ -1,14 +1,12 @@
 import cv2
 import numpy as np
-#import matplotlib.pyplot as plt
-#import matplotlib.image as mpimg
 from PIL import Image   
 import time
 import glob
 
 # Options
-warp = False
-threshold = False
+warp_on = True
+threshold_on = False
 
 # Globals
 M = None
@@ -140,7 +138,7 @@ def threshold(image):
     return gradx_binary
 
 # Warp
-@timing
+#@timing
 def warp_image(image):
     global M
     return cv2.warpPerspective(image, M, (image.shape[1], image.shape[0]))
@@ -371,7 +369,7 @@ speed = 0
 def pipeline( image ):
     global speed, steering_position
     global M, Minv
-    global warp
+    global warp_on, threshold_on
 
     # Define source, dest and matricies for perspective stretch and stretch back
     if M is None:
@@ -390,15 +388,15 @@ def pipeline( image ):
  
     # Threshold the image to make the line edges stand out
 #    image = threshold(image)
-    if threshold:
+    if threshold_on:
         image = sobel_threshold(image, orient='x', sobel_kernel=3, thresh=(2, 200))
 
     # Stretch the image out so we have a bird's-eye view of the scene
-    if warp:
+    if warp_on:
         image = warp_image(image)
 
     # Find the lanes, y goes from 0 to y-max, and left_lane_x and right_lane_x map the lanes
-#    if threshold:
+#    if threshold_on:
 #        _, _, vimage, aimage, left_lane_x, right_lane_x, y = find_lanes(image, image)
 #        image = find_lanes(image, image)
 

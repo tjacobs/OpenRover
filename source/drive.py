@@ -3,12 +3,8 @@
 
 # The main file. Run this to start OpenRover.
 
-
 # The basics
-import os
-import sys
-import time
-import math
+import os, sys, time, math
 
 # ------ Settings -------
 
@@ -103,6 +99,7 @@ frames_per_second = 0
 frames_per_second_so_far = 0
 time_start = time.time()
 lastPWM = 0
+vision_steering = 0
 while not keys or not keys.esc_key_pressed:
     # Remote controls
     if video:
@@ -123,14 +120,13 @@ while not keys or not keys.esc_key_pressed:
     frame = camera.read()
 
     # Run through our machine vision pipeline
-    vision_steering = 0
-    #frame, vision_steering = vision.pipeline(frame)
+    frame, vision_steering = vision.pipeline(frame)
 
     # Post process
-#    frame = process(frame)
+    frame = process(frame)
 
     # Pump this frame out so we can see it remotely
-#    video.send_frame(frame)
+    video.send_frame(frame)
 
     # Output
     steering = min(max(steering + vision_steering, -0.7), 0.9)

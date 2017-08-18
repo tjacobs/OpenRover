@@ -3,7 +3,6 @@
 
 # Remote.
 # Allows you to control it from a website.
-
 import sys
 import os
 import shlex
@@ -13,22 +12,12 @@ import websockets
 import subprocess
 from threading import Thread
 import cv2
-if sys.version_info >= (3, 0):
-        from queue import Queue
-else:
-        from Queue import Queue
 
-Q = None
+# Config options
+showCommandLine = False
+showOutput = False
 resolution = (640, 480)
-
-def timing(f):
-    def wrap(*args):
-        time1 = time.time()
-        ret = f(*args)
-        time2 = time.time()
-        print( '%s %d ms' % (f.__name__, (time2-time1)*1000.0) )
-        return ret
-    return wrap
+bitrate = 50 #kbps. 500 is good for 640x380 over the internet.
 
 # Export mouse x and y, and keyboard button press status
 left_mouse_down = False
@@ -57,7 +46,7 @@ def remote_connect():
     global x, y, left_mouse_down, right_mouse_down, left, right, up, down
     try:
         websocket = yield from websockets.connect("ws://meetzippy.com:8080")
-#        print( "Connected to server." )
+        #print( "Connected to server." )
     except:
         print( "No meetzippy.com connection." )
         return
@@ -66,7 +55,7 @@ def remote_connect():
     try:
         while not done:
             text = yield from websocket.recv()
-            print( text )
+            #print( text )
             if text.startswith( 'left' ):
                 left = (len(text.split()) > 1 and text.split()[1] == "down")
             elif text.startswith( 'right' ):
@@ -90,18 +79,18 @@ def remote_connect():
 # Run coroutine to listen for keyboard/mouse remote commands via websocket
 loop.call_soon_threadsafe(asyncio.async, remote_connect())
 
-ffmpegProcess = None
-
+# Send a frame
 frame_to_send = None
 def send_frame(frame):
-    global ffmpegProcess
     global frame_to_send
     frame_to_send = frame
 
 # Start video transmission
+ffmpegProcess = None
 def video_function():
-
-    global Q, ffmpegProcess, frame_to_send
+    global ffmpegProcess, frame_to_send
+    global showCommandLine, showOutput
+    global resolution, bitrate
 
     # Wake up raspi camera
     #os.system("sudo modprobe bcm2835-v4l2")
@@ -112,21 +101,8 @@ def video_function():
     # Stop ffmpeg
     os.system("sudo killall -9 ffmpeg 2> /dev/null")
    
-    # Which /dev/videoWHAT is our camera
-    videonum = 6
-
-    # Start camera capture
-    if False:
-        cap = cv2.VideoCapture(videonum)
-        cap.set(3, 640)
-        cap.set(4, 480)
-        ret, frame = cap.read()
-        height, width, ch = frame.shape
-        dimension = '{}x{}'.format(width, height)
-        fps = str(cap.get(cv2.CAP_PROP_FPS))
-    else:
-#        dimension = '320x240'
-        dimension = '640x480'
+#   dimension = '320x240'
+    dimension = '640x480'
 
     # With sound:
 #    commandLine = 'ffmpeg -loglevel error -f alsa -ar 44100 -ac 1 -i hw:1 -f mpegts -codec:a mp2 -f v4l2 -framerate 30 -video_size 640x480 -i /dev/video0 -f mpegts -codec:v mpeg1video -s 640x480 -b:v 200k -bf 0 -muxdelay 0.001 http://meetzippy.com:8081/supersecret'
@@ -135,18 +111,12 @@ def video_function():
 #    commandLine = 'ffmpeg -loglevel error -f mpegts -codec:a mp2 -f v4l2 -framerate 30 -video_size 640x480 -i /dev/video{} -f mpegts -codec:v mpeg1video -s 640x480 -b:v 200k -bf 0 -muxdelay 0.001 http://meetzippy.com:8081/supersecret'.format(videonum)
 
     # From stdin:
-    commandLine = 'ffmpeg -y -f rawvideo -vcodec rawvideo -s {dimension} -pix_fmt bgr24 -i - -an -f mpegts -codec:v mpeg1video -b:v 500k -bf 0 http://meetzippy.com:8081/supersecret'.format(dimension=dimension)
-
-    # Config options
-    showCommandLine = False
-    showOutput = False
+    commandLine = 'ffmpeg -y -f rawvideo -vcodec rawvideo -s {dimension} -pix_fmt bgr24 -i - -an -f mpegts -codec:v mpeg1video -b:v {bitrate}k -bf 0 http://meetzippy.com:8081/supersecret'.format(dimension=dimension, bitrate=bitrate)
 
     # Start
-    if showCommandLine:
-        print(commandLine)
     stderr = subprocess.PIPE
-    if showOutput:
-        stderr = None
+    if showOutput: stderr = None
+    if showCommandLine: print(commandLine)
     my_env = os.environ.copy()
     #my_env["LD_PRELOAD"] = "/usr/lib/uv4l/uv4lext/armv6l/libuv4lext.so"
     my_env["LD_LIBRARY_PATH"] = "/usr/local/lib"
@@ -159,18 +129,13 @@ def video_function():
         except:
             pass
  
-        #frame = Q.get()
-        #ret, frame = cap.read()
-        #if not ret:
-        #    break
-
     #cap.release()
     #proc.stdin.close()
     #proc.stderr.close()
     #proc.wait()
 
 # Start thread
+print("Starting video transmission.")
 thread = Thread(target=video_function, args=())
 thread.start()    
-
 
