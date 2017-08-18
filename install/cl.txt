@@ -1,0 +1,7 @@
+OpenCL:
+    Version:                     dynamic
+    Include path:                /home/odroid/OpenRover/install/opencv-3.0.0/3rdparty/include/opencl/1.2
+    Use AMDFFT:                  NO
+    Use AMDBLAS:                 NO
+
+
