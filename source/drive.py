@@ -2,13 +2,7 @@
 # Drive.py
 
 # The main file. Run this to start OpenRover.
-#
-#
 
-# ------ Customisation Settings -------
-# Differential drive (two independent motors each side, like a tank), else Ackermann steering (steerable front wheels, like a car)
-differential = False
-# -------------
 
 # The basics
 import os
@@ -16,9 +10,11 @@ import sys
 import time
 import math
 
-# Start camera
-print("Starting OpenRover on " + str(os.uname()[1]))
-import camera
+# ------ Settings -------
+
+# Differential drive (two independent motors each side, like a tank), else Ackermann steering (steerable front wheels, like a car)
+differential = False
+
 resolution = (640, 480)
 video_number = 0
 if os.uname()[1] == "beaglebone":
@@ -26,10 +22,23 @@ if os.uname()[1] == "beaglebone":
     video_number = 0
 elif os.uname()[1] == "odroid":
     resolution = (640, 480)
-    video_number = 7
+    video_number = 6
+
+# -----------------------
+
+# Start
+print("Starting OpenRover on " + str(os.uname()[1]))
+
+# Start camera
+import camera
 camera.startCamera(resolution, video_number)
 
 # Try importing what we need
+keys = None
+try:
+    import keys
+except:
+    print("No keyboard.")
 try:
     import cv2
 except:
@@ -58,7 +67,7 @@ except:
 
 # Calibrate ESC if it's just the one
 if not differential:
-    print( "Calibrating ESC." )
+    print( "Starting speed controller." )
     motors.setPWM(1, 1.0)
     motors.startPWM(1, 0.01)
     time.sleep(.5)
@@ -72,7 +81,6 @@ steering = 0.0
 acceleration = 0.0
 
 # Video frame post-processing step
-frames_per_second = 0
 def process(image):
     # Just put text over it
     global frames_per_second, steering, acceleration
@@ -91,11 +99,11 @@ frame = cv2.imread('test_images/test1.jpg')
 #cv2.moveWindow( "preview", 10, 10 )
 
 # Loop
+frames_per_second = 0
 frames_per_second_so_far = 0
 time_start = time.time()
 lastPWM = 0
-while True:
-
+while not keys or not keys.esc_key_pressed:
     # Remote controls
     if video:
         if video.up:
@@ -119,13 +127,13 @@ while True:
     #frame, vision_steering = vision.pipeline(frame)
 
     # Post process
-    frame = process(frame)
+#    frame = process(frame)
 
     # Pump this frame out so we can see it remotely
-    video.send_frame(frame)
+#    video.send_frame(frame)
 
     # Output
-    steering = min(max(steering + vision_steering, -0.35), 0.7)
+    steering = min(max(steering + vision_steering, -0.7), 0.9)
     acceleration = min(max(acceleration, -0.1), 0.1)
     if differential:
         # Steer tank style
@@ -139,7 +147,7 @@ while True:
         motors.setPWM(1, acceleration+0.5)
 
         # Send the PWM pulse at most every 10ms
-        if time.time() > lastPWM + 0.01:
+        if time.time() > lastPWM + 0.1:
             motors.runPWM(1)
             motors.runPWM(2)
             lastPWM = time.time()
@@ -162,15 +170,10 @@ while True:
     # Show frame if we have a GUI
     #cv2.imshow( "preview", frame )
 
-    # Esc key hit?
-#    key = cv2.waitKey(20)
-#    if key == 27:
-#        break
-
 # Close and finish
-cv2.destroyWindow( "preview" )
+print("\nStopping.")
+#cv2.destroyWindow( "preview" )
 camera.stopCamera()
-motors.servosOff()
-motors.stopMotors()
+#motors.servosOff()
+#motors.stopMotors()
 print("OpenRover stopped.")
-

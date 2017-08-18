@@ -4,6 +4,11 @@
 echo ""
 echo "Installing."
 
+# Cd into this install dir if run from up one level
+if [ -d install ]; then
+    cd install
+fi
+
 if [ "$1" == "full" ]; then
 	# Update system
 	echo "Updating system."
@@ -30,6 +35,7 @@ echo ""
 echo "Installing python modules."
 sudo pip install -U pip setuptools
 sudo pip install pillow
+sudo pip install keyboard
 sudo pip install matplotlib
 sudo pip3 install pillow
 sudo pip3 install rcpy
@@ -37,7 +43,6 @@ sudo pip3 install imutils
 sudo pip3 install --ignore-installed moviepy
 sudo pip3 install pyserial
 
-#sudo pip install -q keyboard
 #sudo pip install -q picamera[array]
 #sudo pip install -q python_Xlib
 #sudo pip install -q pynput

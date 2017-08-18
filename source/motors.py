@@ -1,3 +1,10 @@
+# OpenRover.
+# Motors.py
+
+# Handles sending commands to motors.
+# Supports Beagle Bone Blue robotic cape PWM outputs, and 
+# Betaflight control boards.
+
 import time
 import sys
 import os
@@ -170,7 +177,6 @@ def setPWM(number, value):
             number1 = value
         elif number == 2:
             number2 = value
-        sendMotorCommands([0, 100.0 * number1, 100.0 * number2], False)
 
 def servosOff():
     try:
@@ -178,16 +184,25 @@ def servosOff():
     except:
         pass
 
+# Sends a single PWM pulse command to the motors
 def runPWM(number):
-    try:
-        servo.enable()
-        if number == 1:
-            esc1.run()
-        elif number == 2:
-            servo2.run()
-    except:
-        pass
+    # If Beagle Bone Blue robotic cape support
+    if rcpy:
+        try:
+            servo.enable()
+            if number == 1:
+                esc1.run()
+            elif number == 2:
+                servo2.run()
+        except:
+            pass
+    else:
+        # Else output to Betaflight style motor controller
+        global number1, number2
+        if number == 1: # Only send if the first motor is pulsed, as we send for all motors in one message
+            sendMotorCommands([0, 100.0 * number1, 100.0 * number2], False)
 
+# Starts a periodic automatic pulse for Beagle Bone Blue
 def startPWM(number, period):
     try:
         if number == 1:
@@ -196,4 +211,3 @@ def startPWM(number, period):
             return servo2.start(period)
     except:
         pass
-

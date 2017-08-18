@@ -1,0 +1,25 @@
+#!/bin/bash
+
+echo "Stopping."
+
+# Stop all python processes
+for PID in `ps ax | grep -E '[p]ython' | awk ' { print $1;}'`; do
+	echo "Stopping $PID"
+	if [ $PID != $BASHPID ] ; then
+    		kill -9 $PID
+	fi
+done
+
+# Stop all python by name
+sudo killall -9 python    2> /dev/null
+sudo killall -9 python2   2> /dev/null
+sudo killall -9 python2.7 2> /dev/null
+sudo killall -9 python3   2> /dev/null
+
+# Check if any are running
+if pgrep python; then
+	echo "Error stopping, python is still running."
+else	
+	echo "Stopped."
+fi
+
