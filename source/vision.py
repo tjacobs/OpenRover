@@ -5,7 +5,7 @@ import time
 import glob
 
 # Options
-warp_on = True
+warp_on = False
 threshold_on = False
 
 # Globals

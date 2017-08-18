@@ -6,7 +6,7 @@ echo "Stopping."
 for PID in `ps ax | grep -E '[p]ython' | awk ' { print $1;}'`; do
 	echo "Stopping $PID"
 	if [ $PID != $BASHPID ] ; then
-    		kill -9 $PID
+    		sudo kill -9 $PID
 	fi
 done
 

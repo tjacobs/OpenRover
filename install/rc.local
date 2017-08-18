@@ -11,7 +11,7 @@
 #
 # By default this script does nothing.
 
-cd /home/debian/OpenRover
-./drive
+cd /home/odroid/OpenRover
+./drive > /home/odroid/OpenRover/log.txt 2> /home/odroid/OpenRover/log2.txt &
 
 exit 0

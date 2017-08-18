@@ -66,12 +66,11 @@ if not differential:
     print( "Starting speed controller." )
     motors.setPWM(1, 1.0)
     motors.startPWM(1, 0.01)
-    time.sleep(.5)
+    time.sleep(2)
     motors.setPWM(1, 0.0)
-    time.sleep(.5)
+    time.sleep(2)
     motors.setPWM(1, 0.5)
-    time.sleep(.5)
-
+ 
 # Our outputs
 steering = 0.0
 acceleration = 0.0
@@ -100,6 +99,7 @@ frames_per_second_so_far = 0
 time_start = time.time()
 lastPWM = 0
 vision_steering = 0
+sys.stdout.flush()
 while not keys or not keys.esc_key_pressed:
     # Remote controls
     if video:
@@ -161,7 +161,7 @@ while not keys or not keys.esc_key_pressed:
         frames_per_second = frames_per_second_so_far
         frames_per_second_so_far = 0
         time_start = time.time()
-    motors.display("FPS: {}".format(frames_per_second))
+    #motors.display("FPS: {}".format(frames_per_second))
     
     # Show frame if we have a GUI
     #cv2.imshow( "preview", frame )

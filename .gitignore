@@ -15,3 +15,7 @@ install/test/
 source/test/
 source/motors.o
 source/motors
+source/out.png
+
+log.txt
+log2.txt
