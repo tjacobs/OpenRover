@@ -11,6 +11,7 @@ import os, sys, time, math
 # Differential drive (two independent motors each side, like a tank), else Ackermann steering (steerable front wheels, like a car)
 differential = False
 
+# Camera capture, vision processing, and video transmission resolution
 resolution = (640, 480)
 video_number = 0
 if os.uname()[1] == "beaglebone":
@@ -68,9 +69,9 @@ if not differential:
     print( "Starting speed controller." )
     motors.setPWM(1, 1.0)
     motors.startPWM(1, 0.01)
-    time.sleep(2)
+#    time.sleep(2)
     motors.setPWM(1, 0.0)
-    time.sleep(2)
+#    time.sleep(2)
     motors.setPWM(1, 0.5)
  
 # Our outputs
@@ -103,6 +104,10 @@ lastPWM = 0
 vision_steering = 0
 vision_speed = 0
 sys.stdout.flush()
+
+v = [20, 150, 2]
+i = 0
+
 while not keys or not keys.esc_key_pressed:
     # Remote controls
     if video:
@@ -120,16 +125,26 @@ while not keys or not keys.esc_key_pressed:
     steering *= 0.9
     
     # Get a frame
-    frame = camera.read()
+#    frame = camera.read()
+    frame = cv2.imread('test_images/test1.jpg')
 
+#    v[1] = i % 250
+ #   i -= 1
+
+    time.sleep( 0.1)
     # Run through our machine vision pipeline
-    frame, vision_steering, vision_speed = vision.pipeline(frame)
+    vision_frame, vision_steering, vision_speed = vision.pipeline(frame, v)
+
+    # Combine frames for Terminator-vision
+#    frame = cv2.addWeighted(frame, 0.5, vision_frame, 0.5, 0)
+    frame = vision_frame
 
     # Post process
     frame = process(frame)
 
     # Pump this frame out so we can see it remotely
-    video.send_frame(frame)
+    if video:
+        video.send_frame(frame)
 
     # Output
     steering = min(max(steering + vision_steering, -0.7), 0.9)

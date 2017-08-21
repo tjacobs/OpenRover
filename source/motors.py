@@ -38,8 +38,9 @@ def display(string):
 
 # Init motors
 board = None
+tries = 0
 def initMotors():
-    global board
+    global board, tries
     try:
         board = MultiWii("/dev/ttyACM0")
     except:
@@ -52,7 +53,8 @@ def initMotors():
                 try:
                     board = MultiWii("/dev/ttyACM2")
                 except:
-                    print( "\nError: Cannot access USB motors." )
+                    print( "Error: Cannot access USB motors." )
+                    tries += 1
                     sys.stdout.flush()
 
     # Motor enable pin
@@ -144,7 +146,9 @@ def sendMotorCommands(motorSpeedsIn, displayChannels=False, displayCommands=Fals
         board.sendCMD(16, MultiWii.SET_RAW_RC, channels)
     except Exception as error:
 #        print( "\n" + str(sys.exc_info()[1]) )
-        initMotors()
+        global tries
+        if tries < 1:
+            initMotors()
 
     # Set enable pin
     try:

@@ -9,7 +9,10 @@ import os
 import shlex
 import time
 import asyncio
-import websockets
+try:
+    import websockets
+except:
+    print("No websockets. Try 'sudo pip install websockets'.")
 import subprocess
 from threading import Thread
 import cv2
