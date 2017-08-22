@@ -119,11 +119,8 @@ def sobel_threshold(img, orient='x', sobel_kernel=3, thresh=(0, 255)):
     # Create a copy and apply the threshold
     binary_output = np.zeros_like(scaled_sobel)
     binary_output[(scaled_sobel >= thresh[0]) & (scaled_sobel <= thresh[1])] = 255
-    
-    colour = cv2.cvtColor( binary_output, cv2.COLOR_GRAY2RGB )
- 
+    colour = cv2.cvtColor(binary_output, cv2.COLOR_GRAY2RGB)
     return colour
-
 
 # Our mega threshold function
 @timing
@@ -131,7 +128,7 @@ def threshold_image(image, v): # V = settings vector
 
     #image = hls_select(image, (v[0], v[1]), min(max(v[2], 0), 1), 1)
 
-    image = sobel_threshold(image, orient='x', sobel_kernel=3, thresh=(120, 190))
+    image = sobel_threshold(image, orient='x', sobel_kernel=3, thresh=(v[0], v[1]))
 
     return image
 
@@ -163,8 +160,8 @@ def find_lanes(image):
 
     # Lane positions
     midpoint = np.int(image.shape[1]*0.5)
-    leftx_base = np.int(image.shape[1]*1.0)
-    rightx_base = np.int(image.shape[1]*0.0)
+    leftx_base = np.int(image.shape[1]*0.75)
+    rightx_base = np.int(image.shape[1]*0.25)
 
     # Choose the number of sliding windows
     nwindows = 10

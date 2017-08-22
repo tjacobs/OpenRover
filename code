@@ -2,7 +2,7 @@
 
 # Start editing
 if [ -d source ]; then
-	geany source/drive.py source/vision.py &
+	geany source/vision.py source/drive.py &
 else
 	"/Applications/Sublime\ Text.app/Contents/MacOS/Sublime\ Text" . 2> /dev/null &
 fi

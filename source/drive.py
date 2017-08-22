@@ -59,8 +59,9 @@ except:
     print("No motors.")
 video = None
 try:
-    import video
-    video.resolution = resolution
+#    import video
+#    video.resolution = resolution
+    pass
 except:
     print("No video.")
 
@@ -161,7 +162,7 @@ while not keys or not keys.esc_key_pressed:
         motors.setPWM(2, steering)
 
         # Accellerate
-        motors.setPWM(1, acceleration+0.5)
+        motors.setPWM(1, acceleration+0.0)
 
         # Send the PWM pulse at most every 10ms
         if time.time() > lastPWM + 0.1:
