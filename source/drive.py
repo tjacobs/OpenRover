@@ -93,8 +93,11 @@ def process(image):
 frame = cv2.imread('test_images/test1.jpg')
 
 # Create window
-#cv2.namedWindow( "preview" )
-#cv2.moveWindow( "preview", 10, 10 )
+if True:
+    print("Starting window.")
+    cv2.namedWindow( "preview" )
+    cv2.moveWindow( "preview", 10, 10 )
+    cv2.imshow("preview", frame)
 
 # Loop
 frames_per_second = 0
@@ -125,13 +128,12 @@ while not keys or not keys.esc_key_pressed:
     steering *= 0.9
     
     # Get a frame
-#    frame = camera.read()
-    frame = cv2.imread('test_images/test1.jpg')
+    frame = camera.read()
+#    frame = cv2.imread('test_images/test1.jpg')
 
 #    v[1] = i % 250
  #   i -= 1
 
-    time.sleep( 0.1)
     # Run through our machine vision pipeline
     vision_frame, vision_steering, vision_speed = vision.pipeline(frame, v)
 
@@ -182,7 +184,9 @@ while not keys or not keys.esc_key_pressed:
     #motors.display("FPS: {}".format(frames_per_second))
     
     # Show frame if we have a GUI
-    #cv2.imshow( "preview", frame )
+    if frame is not None:
+        cv2.imshow("preview", frame)
+        cv2.waitKey(1)
 
 # Close and finish
 print("\nStopping.")

@@ -316,6 +316,9 @@ def pipeline(image, v):
     global speed, steering_position
     global M, Minv
     global warp_on, threshold_on
+    
+    # Blank equals blank
+    if image is None: return None, 0, 0
 
     # Define source, dest and matricies for perspective stretch and stretch back
     if M is None:
