@@ -32,8 +32,8 @@ def hls_select(img, threshold, hls_option, invert = 0):
     # Apply a threshold to the channel
     s = invert * hls[:, :, hls_option]
     binary_output = np.zeros_like(img)
-    binary_output[ (s>=0) ] = 255
-    binary_output[ (s>threshold[0]) & (s<=threshold[1]) ] = 0
+#    binary_output[ (s>=0) ] = 255
+    binary_output[ (s>threshold[0]) & (s<=threshold[1]) ] = 255
     
     # Return a binary image of threshold result
     return binary_output
@@ -102,7 +102,7 @@ def magnitude_threshold(img, sobel_kernel=3, mag_thresh=(0, 255)):
 # Function that applies Sobel x or y, then takes an absolute value and applies a threshold.
 def sobel_threshold(img, orient='x', sobel_kernel=3, thresh=(0, 255)):
     # Convert to grayscale
-    gray = img #cv2.cvtColor( img, cv2.COLOR_RGB2GRAY )
+    gray = cv2.cvtColor( img, cv2.COLOR_RGB2GRAY )
     
     # Take the derivative in x or y given orient = 'x' or 'y', and absolute
     if orient == 'x':
@@ -115,20 +115,23 @@ def sobel_threshold(img, orient='x', sobel_kernel=3, thresh=(0, 255)):
     
     # Rescale back to 8 bit integer
     scaled_sobel = np.uint8( 255*deriv / np.max(deriv) )
-
+    
     # Create a copy and apply the threshold
     binary_output = np.zeros_like(scaled_sobel)
-    binary_output[(scaled_sobel >= thresh[0]) & (scaled_sobel <= thresh[1])] = 1
-    return binary_output
+    binary_output[(scaled_sobel >= thresh[0]) & (scaled_sobel <= thresh[1])] = 255
+    
+    colour = cv2.cvtColor( binary_output, cv2.COLOR_GRAY2RGB )
+ 
+    return colour
 
 
 # Our mega threshold function
 @timing
 def threshold_image(image, v): # V = settings vector
 
-    image = hls_select(image, (v[0], v[1]), min(max(v[2], 0), 1), 1)
+    #image = hls_select(image, (v[0], v[1]), min(max(v[2], 0), 1), 1)
 
-    #image = sobel_threshold(image, orient='x', sobel_kernel=3, thresh=(2, 200))
+    image = sobel_threshold(image, orient='x', sobel_kernel=3, thresh=(120, 190))
 
     return image
 
@@ -343,6 +346,8 @@ def pipeline(image, v):
     if warp_on:
         image = warp_image(image)
 
+#    return image, 0, 0
+    
     # Find the lanes, y goes from 0 to y-max, and left_lane_x and right_lane_x map the lanes
     if threshold_on:
         image_found, left_line_x, right_line_x, y = find_lanes(image)
