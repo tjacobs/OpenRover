@@ -4,6 +4,7 @@ echo ""
 echo "Installing OpenCV."
 pwd=`pwd`
 
+# Show CPU info
 lscpu
 cat /proc/cpuinfo 
 
@@ -24,21 +25,25 @@ sudo apt-get install -y libgtk2.0-dev
 sudo apt-get install -y libatlas-base-dev gfortran
 sudo apt-get install -y python2.7-dev python3-dev
 
-# Install virtualenv
-sudo pip3 install virtualenv virtualenvwrapper
-
 # Add virtualenv
-echo 'export VIRTUALENVWRAPPER_PYTHON=/usr/bin/python3' >> ~/.bashrc
-echo 'export WORKON_HOME=$HOME/.virtualenv' >> ~/.bashrc
-echo 'source /usr/local/bin/virtualenvwrapper.sh' >> ~/.bashrc
+if [ ! -f /usr/local/bin/virtualenvwrapper.sh ]; then
+        # Install virtualenv
+        sudo pip3 install virtualenv virtualenvwrapper
 
-# Run virtualenv
-source ~/.bashrc
-mkvirtualenv py3
+	# Add to .bashrc
+	echo 'export VIRTUALENVWRAPPER_PYTHON=/usr/bin/python3' >> ~/.bashrc
+	echo 'export WORKON_HOME=$HOME/.virtualenv' >> ~/.bashrc
+	echo 'source /usr/local/bin/virtualenvwrapper.sh' >> ~/.bashrc
 
-# Install numpy in py3
-sudo pip install --upgrade pip
-pip install numpy
+	# Run virtualenv
+	source ~/.bashrc
+	mkvirtualenv py3
+	workon py3
+
+	# Install numpy in py3
+	sudo pip install --upgrade pip
+	pip install numpy
+fi
 
 # Get OpenCV
 if [ ! -d opencv-3.0.0 ]; then
@@ -81,6 +86,7 @@ cmake 	-D CMAKE_BUILD_TYPE=RELEASE \
 	-D ENABLE_NEON=ON \
 	-D ENABLE_VFPV3=ON \
 	-D WITH_CUBLAS=ON \
+	-D WITH_FFMPEG=OFF \
 	-D WITH_CUFFT=ON \
 	-D WITH_OPENCL=ON \
 	-D WITH_EIGEN=ON \
@@ -99,22 +105,17 @@ cmake 	-D CMAKE_BUILD_TYPE=RELEASE \
 #      -D BUILD_DOCS=ON BUILD_TESTS=ON 
 
 # Build
-if [ uname -a | grep beaglebone ]; then
-	make 
-else
-	make -j8
-fi
+make 
+#make -j8
 sudo make install
 sudo ldconfig
 
 # Copy object into py3 env
-#if [[ "$uname" =='beaglebone' ]]; then
-#       ln -sf /usr/local/lib/python3.5/dist-packages/cv2.cpython-35m-arm-linux-gnueabihf.so ~/.virtualenv/py3/lib/python3.5/site-packages/cv2.so
-#if [[ "$uname" =='odroid' ]]; then
-        ln -sf /usr/local/lib/python3.5/dist-packages/cv2.cpython-35m-arm-linux-gnueabihf.so ~/.virtualenv/py3/lib/python3.5/site-packages/cv2.so
-#else
-#       ln -sf /usr/local/lib/python3.4/site-packages/cv2.cpython-34m.so ~/.virtualenv/py3/lib/python3.4/site-packages/cv2.so
-#fi
+if [ -f /usr/local/lib/python3.5/dist-packages/cv2.cpython-35m-arm-linux-gnueabihf.so ]; then
+       ln -sf /usr/local/lib/python3.5/dist-packages/cv2.cpython-35m-arm-linux-gnueabihf.so ~/.virtualenv/py3/lib/python3.5/site-packages/cv2.so
+elif [ -f /usr/local/lib/python3.4/site-packages/cv2.cpython-34m.so ]; then 
+       ln -sf /usr/local/lib/python3.4/site-packages/cv2.cpython-34m.so ~/.virtualenv/py3/lib/python3.4/site-packages/cv2.so
+fi
 
 # Done
 python3 -c "import cv2"
