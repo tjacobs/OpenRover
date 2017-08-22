@@ -108,7 +108,7 @@ vision_steering = 0
 vision_speed = 0
 sys.stdout.flush()
 
-v = [20, 150, 2]
+v = [20, 170, 2]
 i = 0
 
 while not keys or not keys.esc_key_pressed:
@@ -131,15 +131,16 @@ while not keys or not keys.esc_key_pressed:
     frame = camera.read()
 #    frame = cv2.imread('test_images/test1.jpg')
 
-#    v[1] = i % 250
- #   i -= 1
+    v[1] = i % 100 + 100
+    i += 1
 
     # Run through our machine vision pipeline
-    vision_frame, vision_steering, vision_speed = vision.pipeline(frame, v)
+    vision_frame1, vision_frame2, vision_steering, vision_speed = vision.pipeline(frame, v)
 
     # Combine frames for Terminator-vision
-#    frame = cv2.addWeighted(frame, 0.5, vision_frame, 0.5, 0)
-    frame = vision_frame
+    frame = cv2.addWeighted(frame, 0.5, vision_frame2, 0.5, 0)
+    frame = cv2.addWeighted(frame, 0.5, vision_frame1, 0.5, 0)
+#    frame = vision_frame
 
     # Post process
     frame = process(frame)

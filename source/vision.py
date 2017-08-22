@@ -153,17 +153,18 @@ def warp_image(image):
     global M
     return cv2.warpPerspective(image, M, (image.shape[1], image.shape[0]))
 
+def dewarp_image(image):
+    global Minv
+    return cv2.warpPerspective(image, Minv, (image.shape[1], image.shape[0]))
 
 # Find those lanes
 @timing
 def find_lanes(image):
-    
-#    left_start_y = np.int(image.shape[0]*0.5)
-#    right_start_y = np.int(image.shape[0]*0.5)
 
+    # Lane positions
     midpoint = np.int(image.shape[1]*0.5)
-    leftx_base = np.int(image.shape[1]*1)
-    rightx_base = np.int(image.shape[1]*0)
+    leftx_base = np.int(image.shape[1]*1.0)
+    rightx_base = np.int(image.shape[1]*0.0)
 
     # Choose the number of sliding windows
     nwindows = 10
@@ -184,7 +185,7 @@ def find_lanes(image):
     margin = 50
 
     # Set minimum number of pixels found to recenter window
-    minpix = 20
+    minpix = 2
 
     # Create empty lists to receive left and right lane pixel indices
     left_lane_inds = []
@@ -215,11 +216,6 @@ def find_lanes(image):
         if len(good_right_inds) > minpix:        
             rightx_current = np.int(np.mean(nonzerox[good_right_inds]))
             cv2.rectangle(image, (win_xright_low, win_y_low), (win_xright_high, win_y_high), (255, 255, 0), 2)
-
-#        if len(good_left_inds)>0:
-#            cv2.rectangle(image, (good_left_inds[0], win_y_low), (good_left_inds[0]+len(good_left_inds), win_y_high), (0, 0, 255), 2)
-#        if len(good_right_inds)>0:
-#            cv2.rectangle(image, (good_right_inds[0], win_y_low), (good_right_inds[0]+len(good_right_inds), win_y_high), (255, 0, 0), 2)
 
     # Concatenate the arrays of indices
     left_lane_inds = np.concatenate(left_lane_inds)
@@ -254,10 +250,11 @@ def find_lanes(image):
     right_line_window2 = np.array([np.flipud(np.transpose(np.vstack([right_fitx+margin, ploty])))])
     right_line_pts = np.hstack((right_line_window1, right_line_window2))
 
-    # Create an output image to draw on and visualize the result. Colouring time. Colour the lanes.
+    # Left lane red, right lane blue. Colour those pixels.
     image[nonzeroy[left_lane_inds],  nonzerox[left_lane_inds]] = [255, 0, 0]
     image[nonzeroy[right_lane_inds], nonzerox[right_lane_inds]] = [0, 0, 255]
 
+    # Return image and both x arrays
     return image, left_fitx, right_fitx, ploty
 
 
@@ -275,35 +272,44 @@ def draw_lanes(image, left_line_x, centre_line_x, right_line_x, y, steer, speed)
     cv2.fillPoly(draw_image, np.int_([pts]), (20, 200, 20))
     image_centre = image.shape[1] / 2.0
 
-    # Black bar
+    # Draw the centre line as a white line
+    right_side = [x+5 for x in centre_line_x]
+    left_side = [x-5 for x in centre_line_x]
+    pts_left = np.array([           np.transpose(np.vstack([left_side, y]))])
+    pts_right = np.array([np.flipud(np.transpose(np.vstack([right_side, y])))])
+    pts = np.hstack((pts_left, pts_right))
+    cv2.fillPoly(draw_image, np.int_([pts]), (200, 200, 200))
+
     steering_bar_width = image.shape[1] / 2
     steering_bar_height = 20
-    steering = np.array( [[[image_centre - steering_bar_width/2, 10], [image_centre + steering_bar_width/2, 10], 
-                           [image_centre + steering_bar_width/2, 10+steering_bar_height], [image_centre - steering_bar_width/2, 10+steering_bar_height]]], dtype=np.int32 )
-    cv2.fillPoly(draw_image, np.int_([steering]), (10, 20, 10))
+    if False:
+        # Black bar
+        steering = np.array( [[[image_centre - steering_bar_width/2, 10], [image_centre + steering_bar_width/2, image.shape[0] - 50], 
+                               [image_centre + steering_bar_width/2, 10+steering_bar_height], [image_centre - steering_bar_width/2, image.shape[0] - 50+steering_bar_height]]], dtype=np.int32 )
+        cv2.fillPoly(draw_image, np.int_([steering]), (10, 20, 10))
 
-    # Green indicator
-    steering_bar_width = 50
-    steering = np.array( [[[steer + image_centre - steering_bar_width/2, 15], [steer + image_centre + steering_bar_width/2, 15], 
-                           [steer + image_centre + steering_bar_width/2, 5+steering_bar_height], [steer + image_centre - steering_bar_width/2, 5+steering_bar_height]]], dtype=np.int32 )
-    cv2.fillPoly(draw_image, np.int_([steering]), (10, 180, 100))
+        # Green indicator
+        steering_bar_width = 50
+        steering = np.array( [[[steer + image_centre - steering_bar_width/2, 15], [steer + image_centre + steering_bar_width/2, image.shape[0] - 50], 
+                               [steer + image_centre + steering_bar_width/2, 5+steering_bar_height], [steer + image_centre - steering_bar_width/2, image.shape[0]- 50 +steering_bar_height]]], dtype=np.int32 )
+        cv2.fillPoly(draw_image, np.int_([steering]), (10, 180, 100))
 
-    # Black bar
-    speed_bar = np.array( [[[image_centre - 15, 70], [image_centre + 15, 70], 
-                           [image_centre + 15, 160], [image_centre - 15, 160]]], dtype=np.int32 )
-    cv2.fillPoly(draw_image, np.int_([speed_bar]), (10, 20, 10))
+        # Black bar
+        speed_bar = np.array( [[[image_centre - 15, 70], [image_centre + 15, 70], 
+                               [image_centre + 15, 160], [image_centre - 15, 160]]], dtype=np.int32 )
+        cv2.fillPoly(draw_image, np.int_([speed_bar]), (10, 20, 10))
 
-    # Green indicator
-    speed_bar = np.array( [[[image_centre - 25, 110-speed], [image_centre + 25, 110-speed], 
-                           [image_centre + 25, 160-speed], [image_centre - 25, 160-speed]]], dtype=np.int32 )
-    cv2.fillPoly(draw_image, np.int_([speed_bar]), (10, 180, 100))
+        # Green indicator
+        speed_bar = np.array( [[[image_centre - 25, 110-speed], [image_centre + 25, 110-speed], 
+                               [image_centre + 25, 160-speed], [image_centre - 25, 160-speed]]], dtype=np.int32 )
+        cv2.fillPoly(draw_image, np.int_([speed_bar]), (10, 180, 100))
 
     # Calculate centre offset
     lane_centre = (left_line_x[-1] + right_line_x[-1]) / 2.0
     offset_distance = lane_centre - image_centre
     try:
         font = cv2.FONT_HERSHEY_SIMPLEX
-        cv2.putText(draw_image, "Crosstrack: " + str( round( offset_distance, 2 ) ) + "m", (10, 100), font, 0.8, (255, 255, 255), 3)#, cv2.LINE_AA)
+#        cv2.putText(draw_image, "Crosstrack: " + str( round( offset_distance, 2 ) ) + "m", (10, 100), font, 0.8, (255, 255, 255), 3)#, cv2.LINE_AA)
     except:
         pass
 
@@ -321,7 +327,7 @@ def pipeline(image, v):
     global warp_on, threshold_on
     
     # Blank equals blank
-    if image is None: return None, 0, 0
+    if image is None: return None, None, 0, 0
 
     # Define source, dest and matricies for perspective stretch and stretch back
     if M is None:
@@ -346,18 +352,16 @@ def pipeline(image, v):
     if warp_on:
         image = warp_image(image)
 
-#    return image, 0, 0
-    
     # Find the lanes, y goes from 0 to y-max, and left_lane_x and right_lane_x map the lanes
     if threshold_on:
         image_found, left_line_x, right_line_x, y = find_lanes(image)
-        centre_line_x = [ int(l_x + r_x / 2) for l_x, r_x in zip(left_line_x, right_line_x) ]
+        centre_line_x = [ int((l_x + r_x) / 2) for l_x, r_x in zip(left_line_x, right_line_x) ]
 
         # Find the centre line curve shape in the edge detected image
         #centre_line_x, y = find_centre_line_curve(image)
 
     # Take the bottom of the centre line, and the top of it, and steer that way
-    steer = (centre_line_x[0]- centre_line_x[-1]) / 20
+    steer = (centre_line_x[-1]- centre_line_x[int(len(centre_line_x)/2)]) / 200
     steer = min(max(steer, -1), 1)
 
     # Calculate speed from how confident we are with our steering nad how straight it is
@@ -367,8 +371,11 @@ def pipeline(image, v):
     lanes_image = draw_lanes(image, left_line_x, centre_line_x, right_line_x, y, steer, speed)
 
     # Return the image and steering command
-    return image_found, steer, speed
-
+    if warp_on:
+        image_found = dewarp_image(image_found)
+        lanes_image = dewarp_image(lanes_image)
+        
+    return image_found, lanes_image, steer, speed
 
 
 # Bonus code
