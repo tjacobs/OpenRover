@@ -24,6 +24,8 @@ sudo apt-get install -y libxvidcore-dev libx264-dev
 sudo apt-get install -y libgtk2.0-dev
 sudo apt-get install -y libatlas-base-dev gfortran
 sudo apt-get install -y python2.7-dev python3-dev
+sudo apt-get install -y libtbb-dev 
+sudo apt-get install -y libqt4-dev libgtk2.0-dev
 
 # Add virtualenv
 if [ ! -f /usr/local/bin/virtualenvwrapper.sh ]; then
@@ -91,7 +93,11 @@ cmake 	-D CMAKE_BUILD_TYPE=RELEASE \
 	-D WITH_OPENCL=ON \
 	-D WITH_EIGEN=ON \
 	-D WITH_OPENGL=ON \
-	-D WITH_QT=OFF \
+	-D WITH_QT=ON \
+	-D WITH_V4L=ON \
+	-D WITH_VTK=ON \
+	-D WITH_OPENGL=ON \
+	-D WITH_TBB=ON \
 	-D BUILD_NEW_PYTHON_SUPPORT=ON \
 	-D OPENCV_EXTRA_MODULES_PATH=$pwd/opencv_contrib-3.0.0/modules \
 	..
@@ -100,7 +106,6 @@ cmake 	-D CMAKE_BUILD_TYPE=RELEASE \
 #      -D PYTHON_EXECUTABLE=/usr/bin/python \
 #      -D BUILD_JPEG=ON \
 #      -D BUILD_SHARED_LIBS=ON \
-#      -D WITH_TBB=ON \
 #      -D BUILD_STATIC_LIBS=ON \
 #      -D BUILD_DOCS=ON BUILD_TESTS=ON 
 
