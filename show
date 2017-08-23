@@ -1,0 +1,4 @@
+#!/bin/bash
+
+sudo /home/debian/.virtualenv/py3/bin/python3 -c "import cv2; print(cv2.getBuildInformation())"
+

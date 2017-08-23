@@ -34,7 +34,8 @@ camera.startCamera(resolution, video_number)
 # Try importing what we need
 keys = None
 try:
-    import keys
+    if os.uname()[1] != "beaglebone":
+        import keys
 except:
     print("No keyboard.")
 try:
@@ -59,9 +60,9 @@ except:
     print("No motors.")
 video = None
 try:
-#    import video
-#    video.resolution = resolution
-    pass
+    if os.uname()[1] == "beaglebone":
+        import video
+        video.resolution = resolution
 except:
     print("No video.")
 
@@ -94,11 +95,13 @@ def process(image):
 frame = cv2.imread('test_images/test1.jpg')
 
 # Create window
-if True:
+display = False
+if os.uname()[1] == "odroid":
     print("Starting window.")
     cv2.namedWindow( "preview" )
     cv2.moveWindow( "preview", 10, 10 )
     cv2.imshow("preview", frame)
+    display = True
 
 # Loop
 frames_per_second = 0
@@ -186,7 +189,7 @@ while not keys or not keys.esc_key_pressed:
     #motors.display("FPS: {}".format(frames_per_second))
     
     # Show frame if we have a GUI
-    if frame is not None:
+    if display and frame is not None:
         cv2.imshow("preview", frame)
         cv2.waitKey(1)
 
