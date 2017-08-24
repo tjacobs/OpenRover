@@ -9,7 +9,7 @@ import os, sys, time, math
 # ------ Settings -------
 
 # Differential drive (two independent motors each side, like a tank), else Ackermann steering (steerable front wheels, like a car)
-differential = False
+differential = True
 
 # Camera capture, vision processing, and video transmission resolution
 resolution = (640, 480)
@@ -60,7 +60,7 @@ except:
     print("No motors.")
 video = None
 try:
-    if os.uname()[1] == "beaglebone":
+    if os.uname()[1] == "beaglebone" or os.uname()[1] == "odroid":
         import video
         video.resolution = resolution
 except:
@@ -96,12 +96,11 @@ frame = cv2.imread('test_images/test1.jpg')
 
 # Create window
 display = False
-if os.uname()[1] == "odroid":
+if display and os.uname()[1] == "odroid":
     print("Starting window.")
     cv2.namedWindow( "preview" )
     cv2.moveWindow( "preview", 10, 10 )
     cv2.imshow("preview", frame)
-    display = True
 
 # Loop
 frames_per_second = 0
@@ -133,7 +132,7 @@ while not keys or not keys.esc_key_pressed:
     
     # Get a frame
     frame = camera.read()
-#    frame = cv2.imread('test_images/test1.jpg')
+    frame = cv2.imread('test_images/test320.jpg')
 
     v[1] = i % 100 + 100
     i += 1
@@ -154,7 +153,7 @@ while not keys or not keys.esc_key_pressed:
         video.send_frame(frame)
 
     # Output
-    steering = min(max(steering + vision_steering, -0.7), 0.9)
+    steering = min(max(steering + vision_steering, -0.5), 0.5)
     acceleration = min(max(acceleration, -0.1), 0.3)
     if differential:
         # Steer tank style
@@ -167,11 +166,11 @@ while not keys or not keys.esc_key_pressed:
         # Accellerate
         motors.setPWM(1, acceleration+0.0)
 
-        # Send the PWM pulse at most every 10ms
-        if time.time() > lastPWM + 0.1:
-            motors.runPWM(1)
-            motors.runPWM(2)
-            lastPWM = time.time()
+    # Send the PWM pulse at most every 10ms
+    if time.time() > lastPWM + 0.1:
+        motors.runPWM(1)
+        motors.runPWM(2)
+        lastPWM = time.time()
 
     # Save frame to disk to debug
     if False:
@@ -195,7 +194,7 @@ while not keys or not keys.esc_key_pressed:
 
 # Close and finish
 print("\nStopping.")
-#cv2.destroyWindow( "preview" )
+cv2.destroyWindow( "preview" )
 camera.stopCamera()
 #motors.servosOff()
 #motors.stopMotors()
