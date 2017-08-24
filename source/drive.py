@@ -70,11 +70,15 @@ except:
 if not differential:
     print( "Starting speed controller." )
     motors.setPWM(1, 1.0)
-    motors.startPWM(1, 0.01)
-#    time.sleep(2)
+    motors.startPWM(1, 0.005)
+    print("Max")
+    time.sleep(3)
     motors.setPWM(1, 0.0)
-#    time.sleep(2)
+    print("Min")
+    time.sleep(3)
     motors.setPWM(1, 0.5)
+    print("Done")
+    time.sleep(3)
  
 # Our outputs
 steering = 0.0
@@ -133,18 +137,19 @@ while not keys or not keys.esc_key_pressed:
     
     # Get a frame
     frame = camera.read()
-#    frame = cv2.imread('test_images/test1.jpg')
+#    frame = cv2.imread('test_images/test320.jpg')
 
     v[1] = i % 100 + 100
     i += 1
 
     # Run through our machine vision pipeline
-    vision_frame1, vision_frame2, vision_steering, vision_speed = vision.pipeline(frame, v)
+    #vision_frame1, vision_frame2, vision_steering, vision_speed = vision.pipeline(frame, v)
+    vision_steering = 0
 
     # Combine frames for Terminator-vision
-    frame = cv2.addWeighted(frame, 0.5, vision_frame2, 0.5, 0)
-    frame = cv2.addWeighted(frame, 0.5, vision_frame1, 0.5, 0)
-#    frame = vision_frame
+    #frame = cv2.addWeighted(frame, 0.5, vision_frame2, 0.5, 0)
+    #frame = cv2.addWeighted(frame, 0.5, vision_frame1, 0.5, 0)
+    #frame = vision_frame1
 
     # Post process
     frame = process(frame)
@@ -165,13 +170,13 @@ while not keys or not keys.esc_key_pressed:
         motors.setPWM(2, steering)
 
         # Accellerate
-        motors.setPWM(1, acceleration+0.0)
+        motors.setPWM(1, acceleration + 0.5)
 
-        # Send the PWM pulse at most every 10ms
-        if time.time() > lastPWM + 0.1:
-            motors.runPWM(1)
-            motors.runPWM(2)
-            lastPWM = time.time()
+    # Send the PWM pulse at most every 10ms
+    if time.time() > lastPWM + 0.01:
+        motors.runPWM(1)
+        motors.runPWM(2)
+        lastPWM = time.time()
 
     # Save frame to disk to debug
     if False:
