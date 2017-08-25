@@ -9,7 +9,9 @@ import os, sys, time, math
 # ------ Settings -------
 
 # Differential drive (two independent motors each side, like a tank), else Ackermann steering (steerable front wheels, like a car)
-differential = True
+differential = False
+if os.uname()[1] == "odroid":
+    differential = True
 
 # Camera capture, vision processing, and video transmission resolution
 resolution = (640, 480)
@@ -96,7 +98,7 @@ def process(image):
     return image
 
 # Open a test image
-frame = cv2.imread('test_images/test1.jpg')
+frame = cv2.imread('test_images/test320.jpg')
 
 # Create window
 display = False
@@ -135,11 +137,11 @@ while not keys or not keys.esc_key_pressed:
     steering *= 0.9
     
     # Get a frame
-    frame = camera.read()
-#    frame = cv2.imread('test_images/test320.jpg')
-
-    v[1] = i % 100 + 100
-    i += 1
+    newFrame = camera.read()
+    if newFrame is None:
+        frame = cv2.imread('test_images/test320.jpg')
+    else:
+        frame = newFrame
 
     # Run through our machine vision pipeline
     #vision_frame1, vision_frame2, vision_steering, vision_speed = vision.pipeline(frame, v)
@@ -158,8 +160,8 @@ while not keys or not keys.esc_key_pressed:
         video.send_frame(frame)
 
     # Output
-    steering = min(max(steering + vision_steering, -0.5), 0.5)
-    acceleration = min(max(acceleration, -0.1), 0.3)
+    steering = min(max(steering + vision_steering, -0.8), 0.8)
+    acceleration = min(max(acceleration, -0.6), 0.6)
     if differential:
         # Steer tank style
         motors.setPWM(1, acceleration + steering)
