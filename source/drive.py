@@ -133,7 +133,7 @@ while not keys or not keys.esc_key_pressed:
            steering += 0.1
 
     # Slow down
-    acceleration *= 0.5
+    acceleration *= 0.9
     steering *= 0.9
     
     # Get a frame
@@ -161,7 +161,7 @@ while not keys or not keys.esc_key_pressed:
 
     # Output
     steering = min(max(steering + vision_steering, -0.8), 0.8)
-    acceleration = min(max(acceleration, -0.6), 0.6)
+    acceleration = min(max(acceleration, -0.8), 0.8)
     if differential:
         # Steer tank style
         motors.setPWM(1, acceleration + steering)
