@@ -70,8 +70,8 @@ async def hello(websocket, path):
         text = await websocket.recv()
         process(text)
 
-#start_server = websockets.serve(hello, '10.0.0.15', 8080)
-start_server = websockets.serve(hello, '127.0.0.1', 8080)
+start_server = websockets.serve(hello, '10.0.0.15', 8080)
+#start_server = websockets.serve(hello, '127.0.0.1', 8080)
 
 # Coroutine for websocket handling
 @asyncio.coroutine
