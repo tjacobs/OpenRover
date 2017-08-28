@@ -46,6 +46,7 @@ if [ ! -f /usr/local/bin/virtualenvwrapper.sh ]; then
 	sudo pip install --upgrade pip
 	pip install numpy
 fi
+source ~/.bashrc
 workon py3
 
 # Get OpenCV
@@ -57,7 +58,7 @@ if [ ! -d opencv-3.0.0 ]; then
 fi
 
 # Get x264
-if [ ! -d x264* ]; then
+if [ ! -d x264 ]; then
 	wget ftp://ftp.videolan.org/pub/videolan/x264/snapshots/last_stable_x264.tar.bz2 -O x264.tar.bz2
 	tar xvfj x264.tar.bz2
 	cd x264*
@@ -101,7 +102,6 @@ cmake 	-D CMAKE_BUILD_TYPE=RELEASE \
 	-D WITH_TBB=ON \
 	-D BUILD_NEW_PYTHON_SUPPORT=ON \
 	-D OPENCV_EXTRA_MODULES_PATH=$pwd/opencv_contrib-3.0.0/modules \
-	-D PYTHON_EXECUTABLE=/home/pi/.virtualenv/py3/bin/python3 \
 	..
 
 # Some more build flags to try:
@@ -109,6 +109,7 @@ cmake 	-D CMAKE_BUILD_TYPE=RELEASE \
 #      -D BUILD_SHARED_LIBS=ON \
 #      -D BUILD_STATIC_LIBS=ON \
 #      -D BUILD_DOCS=ON BUILD_TESTS=ON 
+# -D PYTHON_EXECUTABLE=/home/pi/.virtualenv/py3/bin/python3 \
 
 # Build
 make  -j4
