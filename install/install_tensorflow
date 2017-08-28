@@ -1,0 +1,13 @@
+#!/bin/bash
+
+echo ""
+echo "Installing TensorFlow."
+pwd=`pwd`
+
+wget https://github.com/samjabrahams/tensorflow-on-raspberry-pi/releases/download/v1.0.1/tensorflow-1.0.1-cp27-none-linux_armv7l.whl
+
+sudo pip install tensorflow-1.0.1-cp27-none-linux_armv7l.whl
+
+# Done
+python3 -c "import tensorflow"
+echo "It is done."
