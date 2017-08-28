@@ -34,6 +34,10 @@ import camera
 camera.startCamera(resolution, video_number)
 
 # Try importing what we need
+try:
+    import web
+except:
+    print("No web.")
 keys = None
 try:
     if os.uname()[1] != "beaglebone":
@@ -124,17 +128,17 @@ while not keys or not keys.esc_key_pressed:
     # Remote controls
     if video:
         if video.up:
-            acceleration += 0.1
+            acceleration += 0.05
         if video.down:
-           acceleration -= 0.1
+           acceleration -= 0.05
         if video.right:
-           steering -= 0.1
+           steering -= 0.05
         if video.left:
-           steering += 0.1
+           steering += 0.05
 
     # Slow down
-    acceleration *= 0.9
-    steering *= 0.9
+    acceleration *= 0.8
+    steering *= 0.8
     
     # Get a frame
     newFrame = camera.read()
@@ -160,8 +164,8 @@ while not keys or not keys.esc_key_pressed:
         video.send_frame(frame)
 
     # Output
-    steering = min(max(steering + vision_steering, -0.8), 0.8)
-    acceleration = min(max(acceleration, -0.8), 0.8)
+    steering = min(max(steering + vision_steering, -0.6), 0.6)
+    acceleration = min(max(acceleration, -0.6), 0.6)
     if differential:
         # Steer tank style
         motors.setPWM(1, acceleration + steering)
