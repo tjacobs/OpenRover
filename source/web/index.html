@@ -1,79 +1,64 @@
 <!DOCTYPE html>
-<html lang="en">
-  <head>
-    <meta charset="utf-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <meta name="description" content="">
-    <meta name="author" content="">
+<html>
+<head>
 
-    <link rel="shortcut icon" href="assets/img/favicon.png">
+	<title>OpenRover</title>
 
-    <title>OpenRover</title>
+	<style type="text/css">
+		html, body {
+			background-color: #efeffe;
+			text-align: center;
+		}
+	</style>
 
-    <link href="css/bootstrap.css" rel="stylesheet">
-    <link href="css/main.css" rel="stylesheet">
+  <script type="text/javascript" src="js/jquery-1.11.3.min.js"></script>
+	<script type="text/javascript" src="js/keyboard.min.js"></script>
+  <script type="text/javascript" src="js/jsmpeg.min.js"></script>
 
-    <script type="text/javascript" src="js/jquery-1.11.3.min.js"></script>
-    <script type="text/javascript" src="js/bootstrap.min.js"></script>
-    <script type="text/javascript" src="js/keyboard.min.js"></script>
+</head>
+<body>
 
-  </head>
+  <script type="text/javascript">
 
-  <body>
-  	
-  	<script type="text/javascript">
-  	
-      // Mouse position
-  	  var oldmx;
-  	  var oldmy;
-  	  var mx;
-  	  var my;
-      
-      setInterval( function() { 
-        if( mx != oldmx || my != oldmy ) {
+      var mx;
+      var my;
+
+      $('html').mousedown(function(event){
+            socket.send("left_mouse down");
+      });
+      $('html').mouseup(function(event){
+            socket.send("left_mouse up");
+      });
+
+      $('html').mousemove(function(event){
+            mx = Math.round(event.pageX/1.0);
+            my = Math.round(event.pageY/1.0);
             socket.send("x " + mx);
             socket.send("y " + my);
-            oldmx = mx;
-            oldmy = my;
-        } 
-      }, 100);
-      
-      $('html').mousemove(function(event){
+      });
 
-              mx = Math.round(event.pageX/1.0);
-              my = Math.round(event.pageY/1.0);
-            });
-      
       var socket = null;
       var isopen = false;
-      
+
       window.onload = function() {
         load();
       }
 
       var load = function() {
-      
-        socket = new WebSocket("ws://meetzippy.com:8080");
+        socket = new WebSocket("ws://" + "10.0.0.15" + ":8080");
         socket.binaryType = "arraybuffer";
-      
+
         socket.onopen = function() {
            console.log("Connected");
            isopen = true;
         }
-      
+
         socket.onmessage = function(e) {
            if (typeof e.data == "string") {
               console.log("Text message received: " + e.data);
-           } else {
-              var arr = new Uint8Array(e.data);
-              var hex = '';
-              for (var i = 0; i < arr.length; i++) {
-                 hex += ('00' + arr[i].toString(16)).substr(-2);
-              }
-              console.log("Binary message received: " + hex);
            }
         }
-      
+
         socket.onclose = function(e) {
            console.log("Connection closed.");
            socket = null;
@@ -81,52 +66,50 @@
         }
       };
       
-  	keyboardJS.bind( 'shift', function(e) {
-  		    socket.send("fast");
-  		    console.log('fast');
+      keyboardJS.bind( 'shift', function(e) {
+             socket.send("fast down");
         }, function(e) {
-    		    socket.send("fast-release");
+             socket.send("fast release");
         });
-  		
-  	keyboardJS.bind( 'a', function(e) {
-  		    socket.send("left");
-  		    console.log('left');
-        }, function(e) {
-    		    socket.send("left-release");
-            console.log('');
-        });
-  	keyboardJS.bind( 'w', function(e) {
-  		   if( !socket ) {
-  		     load();
-  		   }
-  		    socket.send("up");
-  		    console.log('up');
-        }, function(e) {
-  		    socket.send("up-release");
-            console.log('');
-        });
-  		keyboardJS.bind( 'd', function(e) {
-  		    socket.send("right");
-  		    console.log('right');
-        }, function(e) {
-    		    socket.send("right-release");
-            console.log('');
-        });
-  		keyboardJS.bind( 's', function(e) {
-  		    socket.send("down");
-  		    console.log('down');
-        }, function(e) {
-    		    socket.send("down-release");
-            console.log('');
-        });
-  		
-  	</script>
 
-    <div id="container">
-    <h1>OpenRover</h1>
-   		<div class="panel-body" id="stream"></div>
+      keyboardJS.bind( 'a', function(e) {
+            socket.send("left down");
+        }, function(e) {
+            socket.send("left release");
+        });
+      keyboardJS.bind( 'w', function(e) {
+            if( !socket ) {
+               load();
+            }
+            socket.send("up down");
+        }, function(e) {
+            socket.send("up release");
+        });
+      keyboardJS.bind( 'd', function(e) {
+            socket.send("right down");
+        }, function(e) {
+            socket.send("right release");
+        });
+      keyboardJS.bind( 's', function(e) {
+            socket.send("down down");
+        }, function(e) {
+            socket.send("down release");
+        });
 
-	  </div>
+  </script>
 
-  </body>
+	<canvas id="video-canvas" style="width:800px;height:600px">
+   
+  </canvas>
+
+	<script type="text/javascript">
+
+    // Connect
+		var canvas = document.getElementById('video-canvas');
+		var url = 'ws://' + '10.0.0.15' + ':8080/';
+		var player = new JSMpeg.Player(url, {canvas: canvas});
+
+	</script>
+
+</body>
 </html>
