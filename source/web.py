@@ -5,6 +5,7 @@
 
 # The basics
 import os, sys, time, math
+from threading import Thread
 
 # ------ Settings -------
 
@@ -15,12 +16,11 @@ import os, sys, time, math
 import socket
 s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
 s.connect(("8.8.8.8", 80))
-print(s.getsockname()[0])
 myIP = s.getsockname()[0]
 s.close()
 
 # Start
-print("Starting Webserver on " + str(myIP) + ".")
+print("Starting webserver on " + str(myIP) + ".")
 
 # Import
 from http.server import BaseHTTPRequestHandler, HTTPServer
@@ -44,7 +44,7 @@ class testHTTPServer_RequestHandler(BaseHTTPRequestHandler):
         self.wfile.write(bytes(message, "utf8"))
         return
  
-def run():
+def web_function():
  
   server_address = (myIP, 80)
 
@@ -56,4 +56,7 @@ def run():
   httpd = HTTPServer(server_address, Handler)
   httpd.serve_forever()
  
-run()
+
+# Start thread
+thread = Thread(target=web_function, args=())
+thread.start()
