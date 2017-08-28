@@ -2,7 +2,7 @@
 # Streams video to a website so you can debug settings while seeing what it sees.
 
 # Remote.
-# Allows you to control it from a website.
+# Allows you to remote control the vehicle from the website.
 
 import sys
 import os
@@ -43,11 +43,39 @@ def thread_function(loop):
     loop.run_forever()
 thread = Thread(target=thread_function, args=(loop,))
 thread.start()
+def process(text):
+    global x, y, left_mouse_down, right_mouse_down, left, right, up, down
+    print(text)
+    if text.startswith( 'left' ):
+        left = (len(text.split()) > 1 and text.split()[1] == "down")
+    elif text.startswith( 'right' ):
+        right = (len(text.split()) > 1 and text.split()[1] == "down")
+    elif text.startswith( 'up' ):
+        up = (len(text.split()) > 1 and text.split()[1] == "down")
+    elif text.startswith( 'down' ):
+        down = (len(text.split()) > 1 and text.split()[1] == "down")
+    elif text.startswith( 'x' ):
+        x = int(text.split()[1])
+    elif text.startswith( 'y' ):
+        y = int(text.split()[1])
+    elif text.startswith( 'left_mouse' ):
+        left_mouse_down = (len(text.split()) > 1 and text.split()[1] == "down")
+    elif text.startswith( 'right_mouse' ):
+        right_mouse_down = (len(test.split()) > 1 and text.split()[1] == "down")
+
+# Process incoming websocket connections
+async def hello(websocket, path):
+    print("Received websocket connection.")
+    while True:
+        text = await websocket.recv()
+        process(text)
+
+#start_server = websockets.serve(hello, '10.0.0.15', 8080)
+start_server = websockets.serve(hello, '127.0.0.1', 8080)
 
 # Coroutine for websocket handling
 @asyncio.coroutine
 def remote_connect():
-    global x, y, left_mouse_down, right_mouse_down, left, right, up, down
     try:
         websocket = yield from websockets.connect("ws://meetzippy.com:8080")
         #print( "Connected to server." )
@@ -59,29 +87,14 @@ def remote_connect():
     try:
         while not done:
             text = yield from websocket.recv()
-            #print( text )
-            if text.startswith( 'left' ):
-                left = (len(text.split()) > 1 and text.split()[1] == "down")
-            elif text.startswith( 'right' ):
-                right = (len(text.split()) > 1 and text.split()[1] == "down")
-            elif text.startswith( 'up' ):
-                up = (len(text.split()) > 1 and text.split()[1] == "down")
-            elif text.startswith( 'down' ):
-                down = (len(text.split()) > 1 and text.split()[1] == "down")
-            elif text.startswith( 'x' ):
-                x = int(text.split()[1])
-            elif text.startswith( 'y' ):
-                y = int(text.split()[1])
-            elif text.startswith( 'left_mouse' ):
-                left_mouse_down = (len(text.split()) > 1 and text.split()[1] == "down")
-            elif text.startswith( 'right_mouse' ):
-                right_mouse_down = (len(test.split()) > 1 and text.split()[1] == "down")
+            process(text)
     finally:
         yield from websocket.close()
     print( "Remote done" )
 
 # Run coroutine to listen for keyboard/mouse remote commands via websocket
-loop.call_soon_threadsafe(asyncio.async, remote_connect())
+#loop.call_soon_threadsafe(asyncio.async, remote_connect())
+loop.call_soon_threadsafe(asyncio.async, start_server)
 
 # Send a frame
 frame_to_send = None
@@ -132,6 +145,7 @@ def video_function():
             ffmpegProcess.stdin.write(frame_to_send.tostring())
         except:
             pass
+        time.sleep(0.1)
  
     #cap.release()
     #proc.stdin.close()
