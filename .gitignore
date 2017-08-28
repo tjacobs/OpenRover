@@ -8,7 +8,7 @@ install/opencv-3.0.0/
 install/x264/
 install/ffmpeg/
 install/opencv_contrib-3.0.0/
-install/x264-snapshot-20170806-2245-stable/
+install/x264*
 install/x264.tar.bz2
 
 install/test/

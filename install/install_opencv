@@ -24,8 +24,8 @@ sudo apt-get install -y libxvidcore-dev libx264-dev
 sudo apt-get install -y libgtk2.0-dev
 sudo apt-get install -y libatlas-base-dev gfortran
 sudo apt-get install -y python2.7-dev python3-dev
-sudo apt-get install -y libtbb-dev 
-sudo apt-get install -y libqt4-dev libgtk2.0-dev
+#sudo apt-get install -y libtbb-dev 
+#sudo apt-get install -y libqt4-dev libgtk2.0-dev
 
 # Add virtualenv
 if [ ! -f /usr/local/bin/virtualenvwrapper.sh ]; then
@@ -46,6 +46,7 @@ if [ ! -f /usr/local/bin/virtualenvwrapper.sh ]; then
 	sudo pip install --upgrade pip
 	pip install numpy
 fi
+workon py3
 
 # Get OpenCV
 if [ ! -d opencv-3.0.0 ]; then
@@ -56,10 +57,10 @@ if [ ! -d opencv-3.0.0 ]; then
 fi
 
 # Get x264
-if [ ! -d x264-snapshot-20170806-2245-stable ]; then
+if [ ! -d x264* ]; then
 	wget ftp://ftp.videolan.org/pub/videolan/x264/snapshots/last_stable_x264.tar.bz2 -O x264.tar.bz2
 	tar xvfj x264.tar.bz2
-	cd x264-snapshot-20170806-2245-stable
+	cd x264*
 	./configure --enable-shared --enable-pic
 	make
 	sudo make install
@@ -93,24 +94,24 @@ cmake 	-D CMAKE_BUILD_TYPE=RELEASE \
 	-D WITH_OPENCL=ON \
 	-D WITH_EIGEN=ON \
 	-D WITH_OPENGL=ON \
-	-D WITH_QT=ON \
+	-D WITH_QT=OFF \
 	-D WITH_V4L=ON \
 	-D WITH_VTK=ON \
 	-D WITH_OPENGL=ON \
 	-D WITH_TBB=ON \
 	-D BUILD_NEW_PYTHON_SUPPORT=ON \
 	-D OPENCV_EXTRA_MODULES_PATH=$pwd/opencv_contrib-3.0.0/modules \
+	-D PYTHON_EXECUTABLE=/home/pi/.virtualenv/py3/bin/python3 \
 	..
 
 # Some more build flags to try:
-#      -D PYTHON_EXECUTABLE=/usr/bin/python \
 #      -D BUILD_JPEG=ON \
 #      -D BUILD_SHARED_LIBS=ON \
 #      -D BUILD_STATIC_LIBS=ON \
 #      -D BUILD_DOCS=ON BUILD_TESTS=ON 
 
 # Build
-make 
+make  -j4
 #make -j8
 sudo make install
 sudo ldconfig
