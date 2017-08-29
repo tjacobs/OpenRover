@@ -10,7 +10,7 @@ import os, sys, time, math
 
 # Differential drive (two independent motors each side, like a tank), else Ackermann steering (steerable front wheels, like a car)
 differential = False
-if os.uname()[1] == "odroid":
+if os.uname()[1] == "odroid" or os.uname()[1] == "raspberrypi":
     differential = True
 
 # Camera capture, vision processing, and video transmission resolution
@@ -70,9 +70,8 @@ except:
     print("No motors.")
 video = None
 try:
-    if os.uname()[1] == "beaglebone" or os.uname()[1] == "odroid":
-        import video
-        video.resolution = resolution
+	import video
+	video.resolution = resolution
 except:
     print("No video.")
 
@@ -84,10 +83,9 @@ if not differential:
 #    print("Max")
     time.sleep(3)
     motors.setPWM(1, 0.0)
-#    print("Min")
-    time.sleep(3)
+    print("Min")
+#    time.sleep(3)
     motors.setPWM(1, 0.5)
-#    print("Done")
     time.sleep(3)
  
 # Our outputs
@@ -128,6 +126,7 @@ sys.stdout.flush()
 v = [20, 170, 2]
 i = 0
 
+print("Running.")
 while not keys or not keys.esc_key_pressed:
     # Remote controls
     if video:
@@ -152,12 +151,12 @@ while not keys or not keys.esc_key_pressed:
         frame = newFrame
 
     # Run through our machine vision pipeline
-    #vision_frame1, vision_frame2, vision_steering, vision_speed = vision.pipeline(frame, v)
+    vision_frame1, vision_frame2, vision_steering, vision_speed = vision.pipeline(frame, v)
     vision_steering = 0
 
     # Combine frames for Terminator-vision
-    #frame = cv2.addWeighted(frame, 0.5, vision_frame2, 0.5, 0)
-    #frame = cv2.addWeighted(frame, 0.5, vision_frame1, 0.5, 0)
+    frame = cv2.addWeighted(frame, 0.5, vision_frame2, 0.5, 0)
+    frame = cv2.addWeighted(frame, 0.5, vision_frame1, 0.5, 0)
     #frame = vision_frame1
 
     # Post process

@@ -45,7 +45,7 @@
       }
 
       var load = function() {
-        socket = new WebSocket("ws://" + "10.0.0.15" + ":8080");
+        socket = new WebSocket("ws://" + "10.0.0.2" + ":8081");
         socket.binaryType = "arraybuffer";
 
         socket.onopen = function() {
@@ -106,7 +106,7 @@
 
     // Connect
 		var canvas = document.getElementById('video-canvas');
-		var url = 'ws://' + '10.0.0.15' + ':8081/';
+		var url = 'ws://' + '10.0.0.2' + ':8082/';
 		var player = new JSMpeg.Player(url, {canvas: canvas});
 
 	</script>
