@@ -17,7 +17,7 @@ def timing(f):
         time1 = time.time()
         ret = f(*args)
         time2 = time.time()
-        print( '%s %d ms' % (f.__name__, (time2-time1)*1000.0) )
+#        print( '%s %d ms' % (f.__name__, (time2-time1)*1000.0) )
         return ret
     return wrap
 
@@ -160,14 +160,14 @@ def find_lanes(image):
 
     # Lane positions
     midpoint = np.int(image.shape[1]*0.5)
-    leftx_base = np.int(image.shape[1]*0.75)
-    rightx_base = np.int(image.shape[1]*0.25)
+    leftx_base = np.int(image.shape[1]*1.0)#0.75)
+    rightx_base = np.int(image.shape[1]*0.0)#25)
 
     # Choose the number of sliding windows
     nwindows = 10
 
     # Set height of windows
-    window_height = np.int(image.shape[0]/nwindows)
+    window_height = np.int(image.shape[0]/nwindows*0.75)
 
     # Identify the x and y positions of all nonzero pixels in the image
     nonzero = image.nonzero()
@@ -179,10 +179,10 @@ def find_lanes(image):
     rightx_current = rightx_base
 
     # Set the width of the windows +/- margin
-    margin = 50
+    margin = 30
 
     # Set minimum number of pixels found to recenter window
-    minpix = 2
+    minpix = 4
 
     # Create empty lists to receive left and right lane pixel indices
     left_lane_inds = []

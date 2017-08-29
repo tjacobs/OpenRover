@@ -45,7 +45,7 @@ thread = Thread(target=thread_function, args=(loop,))
 thread.start()
 def process(text):
     global x, y, left_mouse_down, right_mouse_down, left, right, up, down
-    print(text)
+#    print(text)
     if text.startswith( 'left' ):
         left = (len(text.split()) > 1 and text.split()[1] == "down")
     elif text.startswith( 'right' ):

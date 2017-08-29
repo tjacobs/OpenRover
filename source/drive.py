@@ -152,12 +152,18 @@ while not keys or not keys.esc_key_pressed:
 
     # Run through our machine vision pipeline
     vision_frame1, vision_frame2, vision_steering, vision_speed = vision.pipeline(frame, v)
-    vision_steering = 0
+    #vision_steering = 0
 
     # Combine frames for Terminator-vision
-    frame = cv2.addWeighted(frame, 0.5, vision_frame2, 0.5, 0)
-    frame = cv2.addWeighted(frame, 0.5, vision_frame1, 0.5, 0)
+    frame = cv2.addWeighted(frame, 0.7, vision_frame1, 0.3, 0)
+    frame = cv2.addWeighted(frame, 0.9, vision_frame2, 0.1, 0)
     #frame = vision_frame1
+    
+    # Output
+    vision_steering /= 2
+    steering = min(max(steering + vision_steering, -0.6), 0.6)
+    acceleration = min(max(acceleration, -0.6), 0.6)
+    motors.display("Steer: {0:.2f}".format(steering))
 
     # Post process
     frame = process(frame)
@@ -166,9 +172,8 @@ while not keys or not keys.esc_key_pressed:
     if video:
         video.send_frame(frame)
 
-    # Output
-    steering = min(max(steering + vision_steering, -0.6), 0.6)
-    acceleration = min(max(acceleration, -0.6), 0.6)
+    steering = 0
+
     if differential:
         # Steer tank style
         motors.setPWM(1, acceleration + steering)
@@ -208,6 +213,11 @@ while not keys or not keys.esc_key_pressed:
 
 # Close and finish
 print("\nStopping.")
+motors.setPWM(1, 0)
+motors.setPWM(2, 0)
+motors.runPWM(1)
+motors.runPWM(2)
+time.sleep(3)
 cv2.destroyWindow( "preview" )
 camera.stopCamera()
 #motors.servosOff()
