@@ -14,7 +14,7 @@ if os.uname()[1] == "odroid":
     differential = True
 
 # Camera capture, vision processing, and video transmission resolution
-resolution = (640, 480)
+resolution = (320, 240)
 video_number = 0
 if os.uname()[1] == "beaglebone":
     resolution = (320, 240)
@@ -30,8 +30,12 @@ elif os.uname()[1] == "odroid":
 print("Starting OpenRover on " + str(os.uname()[1]))
 
 # Start camera
-import camera
-camera.startCamera(resolution, video_number)
+try:
+	import camera
+	camera.startCamera(resolution, video_number)
+except:
+	print("No camera or OpenCV.")
+	pass
 
 # Try importing what we need
 try:
@@ -77,13 +81,13 @@ if not differential:
     print( "Starting speed controller." )
     motors.setPWM(1, 1.0)
     motors.startPWM(1, 0.005)
-    print("Max")
+#    print("Max")
     time.sleep(3)
     motors.setPWM(1, 0.0)
-    print("Min")
+#    print("Min")
     time.sleep(3)
     motors.setPWM(1, 0.5)
-    print("Done")
+#    print("Done")
     time.sleep(3)
  
 # Our outputs
@@ -196,7 +200,7 @@ while not keys or not keys.esc_key_pressed:
         frames_per_second = frames_per_second_so_far
         frames_per_second_so_far = 0
         time_start = time.time()
-    #motors.display("FPS: {}".format(frames_per_second))
+#    motors.display("FPS: {}".format(frames_per_second))
     
     # Show frame if we have a GUI
     if display and frame is not None:
