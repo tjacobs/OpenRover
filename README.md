@@ -21,15 +21,19 @@ LaneVision™ is the system for determining where the lanes of the track are in 
 It works thus:
 
 First, we detect vertical edges.
+
 ![](docs/1.gif)
 
 Then, we threshold to be able to see only the detected lines.
+
 ![](docs/2.gif)
 
 Then, we run sliding windows up from the bottom of the image, re-adjusting the window position to center around the most detected line pixels.
+
 ![](docs/3.gif)
 
 Then we fit a polynomial to the window positions, and generate a centre line. 
+
 ![](docs/4.gif)
 
 We use the curve of the centre line to feed into the steering.
