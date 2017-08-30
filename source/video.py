@@ -21,7 +21,7 @@ import cv2
 showCommandLine = False
 showOutput = False
 resolution = (320, 240)
-bitrate = 50 #kbps. 500 is good for 640x480 over the internet.
+bitrate = 500 #kbps. 500 is good for 640x480 over the internet.
 
 # Export mouse x and y, and keyboard button press status
 left_mouse_down = False
@@ -45,7 +45,7 @@ thread = Thread(target=thread_function, args=(loop,))
 thread.start()
 def process(text):
     global x, y, left_mouse_down, right_mouse_down, left, right, up, down
-    print(text)
+#    print(text)
     if text.startswith( 'left' ):
         left = (len(text.split()) > 1 and text.split()[1] == "down")
     elif text.startswith( 'right' ):
@@ -64,14 +64,15 @@ def process(text):
         right_mouse_down = (len(test.split()) > 1 and text.split()[1] == "down")
 
 # Process incoming websocket connections
-async def hello(websocket, path):
+@asyncio.coroutine
+def hello(websocket, path):
     print("Received websocket connection.")
     while True:
-        text = await websocket.recv()
+        text = yield from websocket.recv()
         process(text)
 
-start_server = websockets.serve(hello, '10.0.0.15', 8080)
-#start_server = websockets.serve(hello, '127.0.0.1', 8080)
+start_server = websockets.serve(hello, '10.0.0.2', 8081)
+#start_server = websockets.serve(hello, '127.0.0.1', 8081)
 
 # Coroutine for websocket handling
 @asyncio.coroutine

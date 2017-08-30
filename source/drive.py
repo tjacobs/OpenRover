@@ -10,11 +10,11 @@ import os, sys, time, math
 
 # Differential drive (two independent motors each side, like a tank), else Ackermann steering (steerable front wheels, like a car)
 differential = False
-if os.uname()[1] == "odroid":
+if os.uname()[1] == "odroid" or os.uname()[1] == "raspberrypi":
     differential = True
 
 # Camera capture, vision processing, and video transmission resolution
-resolution = (640, 480)
+resolution = (320, 240)
 video_number = 0
 if os.uname()[1] == "beaglebone":
     resolution = (320, 240)
@@ -30,8 +30,12 @@ elif os.uname()[1] == "odroid":
 print("Starting OpenRover on " + str(os.uname()[1]))
 
 # Start camera
-import camera
-camera.startCamera(resolution, video_number)
+try:
+	import camera
+	camera.startCamera(resolution, video_number)
+except:
+	print("No camera or OpenCV.")
+	pass
 
 # Try importing what we need
 try:
@@ -66,9 +70,8 @@ except:
     print("No motors.")
 video = None
 try:
-    if os.uname()[1] == "beaglebone" or os.uname()[1] == "odroid":
-        import video
-        video.resolution = resolution
+	import video
+	video.resolution = resolution
 except:
     print("No video.")
 
@@ -77,13 +80,12 @@ if not differential:
     print( "Starting speed controller." )
     motors.setPWM(1, 1.0)
     motors.startPWM(1, 0.005)
-    print("Max")
+#    print("Max")
     time.sleep(3)
     motors.setPWM(1, 0.0)
     print("Min")
-    time.sleep(3)
+#    time.sleep(3)
     motors.setPWM(1, 0.5)
-    print("Done")
     time.sleep(3)
  
 # Our outputs
@@ -124,6 +126,7 @@ sys.stdout.flush()
 v = [20, 170, 2]
 i = 0
 
+print("Running.")
 while not keys or not keys.esc_key_pressed:
     # Remote controls
     if video:
@@ -148,13 +151,19 @@ while not keys or not keys.esc_key_pressed:
         frame = newFrame
 
     # Run through our machine vision pipeline
-    #vision_frame1, vision_frame2, vision_steering, vision_speed = vision.pipeline(frame, v)
-    vision_steering = 0
+    vision_frame1, vision_frame2, vision_steering, vision_speed = vision.pipeline(frame, v)
+    #vision_steering = 0
 
     # Combine frames for Terminator-vision
-    #frame = cv2.addWeighted(frame, 0.5, vision_frame2, 0.5, 0)
-    #frame = cv2.addWeighted(frame, 0.5, vision_frame1, 0.5, 0)
+    frame = cv2.addWeighted(frame, 0.7, vision_frame1, 0.3, 0)
+    frame = cv2.addWeighted(frame, 0.9, vision_frame2, 0.1, 0)
     #frame = vision_frame1
+    
+    # Output
+    vision_steering /= 2
+    steering = min(max(steering + vision_steering, -0.6), 0.6)
+    acceleration = min(max(acceleration, -0.6), 0.6)
+    motors.display("Steer: {0:.2f}".format(steering))
 
     # Post process
     frame = process(frame)
@@ -163,9 +172,8 @@ while not keys or not keys.esc_key_pressed:
     if video:
         video.send_frame(frame)
 
-    # Output
-    steering = min(max(steering + vision_steering, -0.6), 0.6)
-    acceleration = min(max(acceleration, -0.6), 0.6)
+    steering = 0
+
     if differential:
         # Steer tank style
         motors.setPWM(1, acceleration + steering)
@@ -196,7 +204,7 @@ while not keys or not keys.esc_key_pressed:
         frames_per_second = frames_per_second_so_far
         frames_per_second_so_far = 0
         time_start = time.time()
-    #motors.display("FPS: {}".format(frames_per_second))
+#    motors.display("FPS: {}".format(frames_per_second))
     
     # Show frame if we have a GUI
     if display and frame is not None:
@@ -205,6 +213,11 @@ while not keys or not keys.esc_key_pressed:
 
 # Close and finish
 print("\nStopping.")
+motors.setPWM(1, 0)
+motors.setPWM(2, 0)
+motors.runPWM(1)
+motors.runPWM(2)
+time.sleep(3)
 cv2.destroyWindow( "preview" )
 camera.stopCamera()
 #motors.servosOff()

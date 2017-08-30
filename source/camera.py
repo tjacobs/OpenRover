@@ -29,22 +29,26 @@ running = True
 
 # Read a frame from the camera
 def read():
-        # Return next frame in the queue
-        #global Q
-        #frame = Q.get()
-    
     # Just return the current frame
-        global frame
-        return frame
+    global frame
+    return frame
 
 def update():
         global cap
         global frame
         global running
+        global rawCapture
+        global picamera
         while running:
             # Read that frame
             #print( "Read one camera frame" )
-            (grabbed, frame) = cap.read()
+            if rawCapture:
+                rawCapture.truncate(0)
+                picamera.capture(rawCapture, format="bgr") #, resize=(640, 360))
+                frame = rawCapture.array
+            else:
+                # Capture frame from regular USB webcam
+                (grabbed, frame) = cap.read()
         print("Stopped camera.")
 
 def startCamera(resolution, cam_number=0):
@@ -68,10 +72,9 @@ def startCamera(resolution, cam_number=0):
                     except:
                         print("Error starting camera.")
                         pass 
-                if True: 
-                    cap.set(3, resolution[0])
-                    cap.set(4, resolution[1])
-                    #cap.set(15, 0.1) # Exposure, not usually supported
+                cap.set(3, resolution[0])
+                cap.set(4, resolution[1])
+                #cap.set(15, 0.1) # Exposure, not usually supported
 
         # Start thread
         t = Thread(target=update, args=())
@@ -84,23 +87,3 @@ def stopCamera():
         running = False
         if cap:
             cap.release()
-
-def saveFrame(filepath):
-        global picamera
-        picamera.start_preview()
-        picamera.capture(filepath)
-
-def getFrame():
-        global rawCapture, picamera, cap
-        if rawCapture:
-                rawCapture.truncate(0)
-                picamera.capture(rawCapture, format="bgr") #, resize=(640, 360))
-                return rawCapture.array
-        else:
-                # Capture frame from regular USB webcam
-            ret, frame = cap.read()
-            return frame
-
-def showFrame(image):
-        cv2.imshow( "Image", image )
-        cv2.waitKey(0)
