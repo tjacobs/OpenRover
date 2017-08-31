@@ -45,7 +45,7 @@
       }
 
       var load = function() {
-        socket = new WebSocket("ws://" + "10.0.0.2" + ":8081");
+        socket = new WebSocket("ws://" + window.location.hostname + ":8081");
         socket.binaryType = "arraybuffer";
 
         socket.onopen = function() {
@@ -97,8 +97,9 @@
         });
 
   </script>
-
-	<canvas id="video-canvas" style="width:800px;height:600px">
+  <center>
+  <h3>OpenRover</h3>
+	<canvas id="video-canvas" style="width:100%;height:80%">
    
   </canvas>
 
@@ -106,7 +107,7 @@
 
     // Connect
 		var canvas = document.getElementById('video-canvas');
-		var url = 'ws://' + '10.0.0.2' + ':8082/';
+		var url = 'ws://' + window.location.hostname + ':8082/';
 		var player = new JSMpeg.Player(url, {canvas: canvas});
 
 	</script>
