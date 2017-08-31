@@ -5,7 +5,7 @@ import time
 import glob
 
 # Options
-warp_on = False
+warp_on = True
 threshold_on = True
 
 # Globals
@@ -160,8 +160,8 @@ def find_lanes(image):
 
     # Lane positions
     midpoint = np.int(image.shape[1]*0.5)
-    leftx_base = np.int(image.shape[1]*1.0)#0.75)
-    rightx_base = np.int(image.shape[1]*0.0)#25)
+    leftx_base = np.int(image.shape[1]*0.60)
+    rightx_base = np.int(image.shape[1]*0.40)
 
     # Choose the number of sliding windows
     nwindows = 10
@@ -368,11 +368,11 @@ def pipeline(image, v):
     lanes_image = draw_lanes(image, left_line_x, centre_line_x, right_line_x, y, steer, speed)
 
     # Return the image and steering command
-    if warp_on:
+    if False and warp_on:
         image_found = dewarp_image(image_found)
         lanes_image = dewarp_image(lanes_image)
         
-    return image_found, lanes_image, steer, speed
+    return image, image_found, steer, speed
 
 
 # Bonus code

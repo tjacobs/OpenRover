@@ -10,7 +10,7 @@ import os, sys, time, math
 
 # Differential drive (two independent motors each side, like a tank), else Ackermann steering (steerable front wheels, like a car)
 differential = False
-if os.uname()[1] == "odroid" or os.uname()[1] == "raspberrypi":
+if os.uname()[1] == "odroid":
     differential = True
 
 # Camera capture, vision processing, and video transmission resolution
@@ -80,12 +80,12 @@ if not differential:
     print( "Starting speed controller." )
     motors.setPWM(1, 1.0)
     motors.startPWM(1, 0.005)
-#    print("Max")
+    motors.runPWM(1)
+    print("Max")
     time.sleep(3)
-    motors.setPWM(1, 0.0)
+    motors.setPWM(1, -1.0)
+    motors.runPWM(1)
     print("Min")
-#    time.sleep(3)
-    motors.setPWM(1, 0.5)
     time.sleep(3)
  
 # Our outputs
@@ -121,6 +121,7 @@ time_start = time.time()
 lastPWM = 0
 vision_steering = 0
 vision_speed = 0
+acceleration_time = 0
 sys.stdout.flush()
 
 v = [20, 170, 2]
@@ -131,17 +132,17 @@ while not keys or not keys.esc_key_pressed:
     # Remote controls
     if video:
         if video.up:
-            acceleration += 0.05
+            acceleration += 0.19
         if video.down:
-           acceleration -= 0.05
+           acceleration -= 0.19
         if video.right:
-           steering -= 0.05
+           steering += 0.19
         if video.left:
-           steering += 0.05
+           steering -= 0.19
 
     # Slow down
-    acceleration *= 0.8
-    steering *= 0.8
+    acceleration *= 0.9
+    steering *= 0.9
     
     # Get a frame
     newFrame = camera.read()
@@ -152,18 +153,25 @@ while not keys or not keys.esc_key_pressed:
 
     # Run through our machine vision pipeline
     vision_frame1, vision_frame2, vision_steering, vision_speed = vision.pipeline(frame, v)
-    #vision_steering = 0
+#    vision_steering = 0
+    acceleration = 0.2
 
     # Combine frames for Terminator-vision
-    frame = cv2.addWeighted(frame, 0.7, vision_frame1, 0.3, 0)
-    frame = cv2.addWeighted(frame, 0.9, vision_frame2, 0.1, 0)
+    #frame = cv2.addWeighted(frame, 0.7, vision_frame1, 0.3, 0)
+    frame = cv2.addWeighted(vision_frame1, 0.5, vision_frame2, 0.5, 0)
     #frame = vision_frame1
     
     # Output
     vision_steering /= 2
-    steering = min(max(steering + vision_steering, -0.6), 0.6)
-    acceleration = min(max(acceleration, -0.6), 0.6)
-    motors.display("Steer: {0:.2f}".format(steering))
+    steering = min(max(steering - vision_steering, -0.8), 0.8)
+    acceleration = min(max(acceleration, -0.0), 0.4)
+#    motors.display("Steer: {0:.2f}".format(steering))
+   
+    # Pump the throttle 
+    if( time.time() - acceleration_time > 1.0 ):
+        acceleration = 0
+    if( time.time() - acceleration_time > 2.0 ):
+        acceleration_time = time.time()
 
     # Post process
     frame = process(frame)
@@ -172,7 +180,7 @@ while not keys or not keys.esc_key_pressed:
     if video:
         video.send_frame(frame)
 
-    steering = 0
+    #steering = 0
 
     if differential:
         # Steer tank style
@@ -183,10 +191,10 @@ while not keys or not keys.esc_key_pressed:
         motors.setPWM(2, steering)
 
         # Accellerate
-        motors.setPWM(1, acceleration + 0.5)
+        motors.setPWM(1, acceleration - 1.0)# + 0.5)
 
     # Send the PWM pulse at most every 10ms
-    if time.time() > lastPWM + 0.01:
+    if time.time() > lastPWM + 0.1:
         motors.runPWM(1)
         motors.runPWM(2)
         lastPWM = time.time()
