@@ -23,6 +23,24 @@ def timing(f):
 
 # --------- Thresholding functions ----------
 
+def equalise_image(img): # Histogram normalization
+    img[:, :, 0] = cv2.equalizeHist(img[:, :, 0])
+    img[:, :, 1] = cv2.equalizeHist(img[:, :, 1])
+    img[:, :, 2] = cv2.equalizeHist(img[:, :, 2])
+    return img
+
+def sharpen_image(img):
+    gb = cv2.GaussianBlur(img, (5,5), 20.0)
+    return cv2.addWeighted(img, 2, gb, -1, 0)
+
+def linear_image(img, s=1.0, m=0.0): # Compute linear image transformation img*s+m
+    img2=cv2.multiply(img, np.array([s]))
+    return cv2.add(img2, np.array([m]))
+
+def contrast_image(img, s=1.0): # Change image contrast; s>1 - increase
+    m=127.0*(1.0-s)
+    return lin_img(img, s, m)
+
 # Function that thresholds a channel of HLS
 @timing
 def hls_select(img, threshold, hls_option, invert = 0):

@@ -44,7 +44,7 @@ except:
     print("No web.")
 keys = None
 try:
-    if os.uname()[1] != "beaglebone":
+    if os.uname()[1] != "beaglebone" and os.uname()[1] != "Thomass-Air":
         import keys
 except:
     print("No keyboard.")
@@ -70,10 +70,14 @@ except:
     print("No motors.")
 video = None
 try:
-	import video
-	video.resolution = resolution
+    import video
+    video.resolution = resolution
 except:
     print("No video.")
+try:
+    import remote
+except:
+    print("No remote.")
 
 # Calibrate ESC if it's just the one
 if not differential:
@@ -130,14 +134,14 @@ i = 0
 print("Running.")
 while not keys or not keys.esc_key_pressed:
     # Remote controls
-    if video:
-        if video.up:
+    if remote:
+        if remote.up:
             acceleration += 0.19
-        if video.down:
+        if remote.down:
            acceleration -= 0.19
-        if video.right:
+        if remote.right:
            steering += 0.19
-        if video.left:
+        if remote.left:
            steering -= 0.19
 
     # Slow down
@@ -170,11 +174,17 @@ while not keys or not keys.esc_key_pressed:
     # Pump the throttle 
     if( time.time() - acceleration_time > 1.0 ):
         acceleration = 0
-    if( time.time() - acceleration_time > 2.0 ):
+    if( time.time() - acceleration_time > 3.0 ):
         acceleration_time = time.time()
+    #motors.display("Steer: {0:.2f}".format(steering))
 
     # Post process
     frame = process(frame)
+
+    # Send this jpg image out to the websocket
+    if True:
+        jpg_frame = cv2.imencode(".jpg", frame)[1]
+        remote.send_frame(jpg_frame)
 
     # Pump this frame out so we can see it remotely
     if video:

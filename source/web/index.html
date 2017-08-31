@@ -17,6 +17,10 @@
 
 </head>
 <body>
+  <center>
+  <h3>OpenRover</h3>
+
+  <img id="vidimage" style="width:100%;height:80%">
 
   <script type="text/javascript">
 
@@ -45,7 +49,7 @@
       }
 
       var load = function() {
-        socket = new WebSocket("ws://" + "10.0.0.2" + ":8081");
+        socket = new WebSocket("ws://" + window.location.hostname + ":8081");
         socket.binaryType = "arraybuffer";
 
         socket.onopen = function() {
@@ -56,6 +60,17 @@
         socket.onmessage = function(e) {
            if (typeof e.data == "string") {
               console.log("Text message received: " + e.data);
+           }
+           else {
+
+              img = $("#vidimage")[0];
+
+              // Make image
+              var arrayBufferView = new Uint8Array(e.data);
+              var blob = new Blob( [ arrayBufferView ], { type: "image/jpeg" } );
+              var urlCreator = window.URL || window.webkitURL;
+              var imageUrl = urlCreator.createObjectURL( blob );
+              img.src = imageUrl;
            }
         }
 
@@ -98,17 +113,14 @@
 
   </script>
 
-	<canvas id="video-canvas" style="width:800px;height:600px">
-   
-  </canvas>
 
 	<script type="text/javascript">
 
     // Connect
-		var canvas = document.getElementById('video-canvas');
-		var url = 'ws://' + '10.0.0.2' + ':8082/';
+/*		var canvas = document.getElementById('video-canvas');
+		var url = 'ws://' + window.location.hostname + ':8082/';
 		var player = new JSMpeg.Player(url, {canvas: canvas});
-
+*/
 	</script>
 
 </body>

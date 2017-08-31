@@ -53,7 +53,7 @@ def initMotors():
                 try:
                     board = MultiWii("/dev/ttyACM2")
                 except:
-                    print( "Error: Cannot access USB motors." )
+                    print("\nNo motor output.")
                     tries += 1
                     sys.stdout.flush()
 
