@@ -202,13 +202,13 @@ while not keys or not keys.esc_key_pressed:
         motors.setPWM(1, acceleration - 1.0)
 
     # Read IMU
-    imu = motors.readIMU()
-    if imu is not None and imu != 0:
-        gy_sum -= imu['gz']
-    print(imu)
-    spaces = int(gy_sum/10)
-    gy_sum *= 0.9
-    print(" " * spaces + "*") 
+#    imu = motors.readIMU()
+#    if imu is not None and imu != 0:
+#        gy_sum -= imu['ax']
+#    print(imu)
+#    spaces = int(gy_sum/10) + 10
+#    gy_sum *= 0.9
+#    print(" " * spaces + "*") 
 
     # Send the PWM pulse at most every 10ms
     if time.time() > lastPWM + 0.1:
