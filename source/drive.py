@@ -21,7 +21,7 @@ if os.uname()[1] == "beaglebone":
     video_number = 0
 elif os.uname()[1] == "odroid":
     resolution = (320, 240)  # Getting about 8 FPS
-#    resolution = (640, 480) # Getting about 2 FPS
+    resolution = (640, 480) # Getting about 2 FPS
     video_number = 6
 
 # -----------------------
@@ -157,15 +157,15 @@ while not keys or not keys.esc_key_pressed:
 
     # Run through our machine vision pipeline
     vision_frame1, vision_frame2, vision_steering, vision_speed = vision.pipeline(frame, v)
-#    vision_steering = 0
-    acceleration = 0.2
+    #vision_steering = 0
+    acceleration = 0.3
 
     # Combine frames for Terminator-vision
     #frame = cv2.addWeighted(frame, 0.7, vision_frame1, 0.3, 0)
     frame = cv2.addWeighted(vision_frame1, 0.8, vision_frame2, 0.2, 0)
     
     # Output
-    vision_steering /= 2
+    vision_steering /= 4
     steering = min(max(steering - vision_steering, -0.8), 0.8)
     acceleration = min(max(acceleration, -0.0), 0.4)
     #motors.display("Steer: {0:.2f}".format(steering))
@@ -173,7 +173,8 @@ while not keys or not keys.esc_key_pressed:
     # Pump the throttle 
     if( time.time() - acceleration_time > 1.0 ):
         acceleration = 0
-    if( time.time() - acceleration_time > 3.0 ):
+        steering = 0
+    if( time.time() - acceleration_time > 4.0 ):
         acceleration_time = time.time()
     #motors.display("Steer: {0:.2f}".format(steering))
 
@@ -181,14 +182,13 @@ while not keys or not keys.esc_key_pressed:
     frame = process(frame)
 
     # Send this jpg image out to the websocket
-    jpg_frame = cv2.imencode(".jpg", frame)[1]
-    remote.send_frame(jpg_frame)
+    if frame is not None:
+        jpg_frame = cv2.imencode(".jpg", frame)[1]
+        remote.send_frame(jpg_frame)
 
     # Pump this frame out so we can see it remotely
     if video:
         video.send_frame(frame)
-
-    #steering = 0
 
     if differential:
         # Steer tank style
@@ -198,17 +198,17 @@ while not keys or not keys.esc_key_pressed:
         # Steer Ackermann style
         motors.setPWM(2, steering)
 
-        # Accellerate
+        # Accelerate
         motors.setPWM(1, acceleration - 1.0)
 
     # Read IMU
-#    imu = motors.readIMU()
-#    if imu is not None and imu != 0:
-#        gy_sum -= imu['ax']
-#    print(imu)
-#    spaces = int(gy_sum/10) + 10
-#    gy_sum *= 0.9
-#    print(" " * spaces + "*") 
+    imu = motors.readIMU()
+    if imu is not None and imu != 0:
+        gy_sum -= imu['ax']
+    print(imu)
+    spaces = int(gy_sum/10) + 10
+    gy_sum *= 0.9
+    print(" " * spaces + "*") 
 
     # Send the PWM pulse at most every 10ms
     if time.time() > lastPWM + 0.1:
