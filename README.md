@@ -52,6 +52,11 @@ To start driving, run this.
 ./drive
 ```
 
-# Development
-Currently broadcasts to http://meetzippy.com, where you can turn on and off various OpenCV methods.
+# Driving
+
+OpenRover serves its web interface from the device's IP address. Open a browser to e.g. http://10.0.0.2 and you will be able to manually drive the car with w, a, s, d keys from the page.
+
+OpenRover currently broadcasts its vision-processed video feed to http://meetzippy.com. This will be changed to serve to the locally served webpage in the next version for faster throughput.
+
+
 
