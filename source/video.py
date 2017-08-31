@@ -1,18 +1,14 @@
-# Video.
+# OpenRover.
+# Video.py
+#
 # Streams video to a website so you can debug settings while seeing what it sees.
-
-# Remote.
-# Allows you to remote control the vehicle from the website.
+#
 
 import sys
 import os
 import shlex
 import time
 import asyncio
-try:
-    import websockets
-except:
-    print("No websockets. Try 'sudo pip install websockets'.")
 import subprocess
 from threading import Thread
 import cv2
@@ -22,80 +18,6 @@ showCommandLine = False
 showOutput = False
 resolution = (320, 240)
 bitrate = 500 #kbps. 500 is good for 640x480 over the internet.
-
-# Export mouse x and y, and keyboard button press status
-left_mouse_down = False
-right_mouse_down = False
-x = 0
-y = 0
-left = False
-right = False
-up = False
-down = False
-
-# Finished?
-done = False
-
-# Start thread and create new event loop
-loop = asyncio.new_event_loop()
-def thread_function(loop):
-    asyncio.set_event_loop(loop)
-    loop.run_forever()
-thread = Thread(target=thread_function, args=(loop,))
-thread.start()
-def process(text):
-    global x, y, left_mouse_down, right_mouse_down, left, right, up, down
-#    print(text)
-    if text.startswith( 'left' ):
-        left = (len(text.split()) > 1 and text.split()[1] == "down")
-    elif text.startswith( 'right' ):
-        right = (len(text.split()) > 1 and text.split()[1] == "down")
-    elif text.startswith( 'up' ):
-        up = (len(text.split()) > 1 and text.split()[1] == "down")
-    elif text.startswith( 'down' ):
-        down = (len(text.split()) > 1 and text.split()[1] == "down")
-    elif text.startswith( 'x' ):
-        x = int(text.split()[1])
-    elif text.startswith( 'y' ):
-        y = int(text.split()[1])
-    elif text.startswith( 'left_mouse' ):
-        left_mouse_down = (len(text.split()) > 1 and text.split()[1] == "down")
-    elif text.startswith( 'right_mouse' ):
-        right_mouse_down = (len(test.split()) > 1 and text.split()[1] == "down")
-
-# Process incoming websocket connections
-@asyncio.coroutine
-def hello(websocket, path):
-    print("Received websocket connection.")
-    while True:
-        text = yield from websocket.recv()
-        process(text)
-
-start_server = websockets.serve(hello, '10.0.0.2', 8081)
-#start_server = websockets.serve(hello, '127.0.0.1', 8081)
-
-# Coroutine for websocket handling
-@asyncio.coroutine
-def remote_connect():
-    try:
-        websocket = yield from websockets.connect("ws://meetzippy.com:8080")
-        #print( "Connected to server." )
-    except:
-        print( "No meetzippy.com connection." )
-        return
-
-    # Loop
-    try:
-        while not done:
-            text = yield from websocket.recv()
-            process(text)
-    finally:
-        yield from websocket.close()
-    print( "Remote done" )
-
-# Run coroutine to listen for keyboard/mouse remote commands via websocket
-#loop.call_soon_threadsafe(asyncio.async, remote_connect())
-loop.call_soon_threadsafe(asyncio.async, start_server)
 
 # Send a frame
 frame_to_send = None
@@ -147,11 +69,12 @@ def video_function():
         except:
             pass
         time.sleep(0.1)
- 
-    #cap.release()
-    #proc.stdin.close()
-    #proc.stderr.close()
-    #proc.wait()
+
+    # Close
+    cap.release()
+    proc.stdin.close()
+    proc.stderr.close()
+    proc.wait()
 
 # Start thread
 print("Starting video transmission.")

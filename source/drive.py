@@ -44,7 +44,7 @@ except:
     print("No web.")
 keys = None
 try:
-    if os.uname()[1] != "beaglebone":
+    if os.uname()[1] != "beaglebone" and os.uname()[1] != "Thomass-Air":
         import keys
 except:
     print("No keyboard.")
@@ -74,6 +74,10 @@ try:
 	video.resolution = resolution
 except:
     print("No video.")
+try:
+    import remote
+except:
+    print("No remote.")
 
 # Calibrate ESC if it's just the one
 if not differential:
@@ -129,14 +133,14 @@ i = 0
 print("Running.")
 while not keys or not keys.esc_key_pressed:
     # Remote controls
-    if video:
-        if video.up:
+    if remote:
+        if remote.up:
             acceleration += 0.05
-        if video.down:
+        if remote.down:
            acceleration -= 0.05
-        if video.right:
+        if remote.right:
            steering -= 0.05
-        if video.left:
+        if remote.left:
            steering += 0.05
 
     # Slow down
