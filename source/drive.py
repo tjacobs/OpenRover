@@ -69,28 +69,28 @@ try:
 except:
     print("No motors.")
 video = None
-try:
-    import video
-    video.resolution = resolution
-except:
-    print("No video.")
+#try:
+#    import video
+#    video.resolution = resolution
+#except:
+#    print("No video.")
 try:
     import remote
 except:
     print("No remote.")
 
 # Calibrate ESC if it's just the one
-if not differential:
+if False and not differential:
     print( "Starting speed controller." )
     motors.setPWM(1, 1.0)
     motors.startPWM(1, 0.005)
     motors.runPWM(1)
-    print("Max")
-    time.sleep(3)
+#    print("Max")
+    time.sleep(1)
     motors.setPWM(1, -1.0)
     motors.runPWM(1)
-    print("Min")
-    time.sleep(3)
+#    print("Min")
+    time.sleep(1)
  
 # Our outputs
 steering = 0.0
@@ -129,7 +129,7 @@ acceleration_time = 0
 sys.stdout.flush()
 
 v = [20, 170, 2]
-i = 0
+gy_sum = 0
 
 print("Running.")
 while not keys or not keys.esc_key_pressed:
@@ -162,14 +162,13 @@ while not keys or not keys.esc_key_pressed:
 
     # Combine frames for Terminator-vision
     #frame = cv2.addWeighted(frame, 0.7, vision_frame1, 0.3, 0)
-    frame = cv2.addWeighted(vision_frame1, 0.5, vision_frame2, 0.5, 0)
-    #frame = vision_frame1
+    frame = cv2.addWeighted(vision_frame1, 0.8, vision_frame2, 0.2, 0)
     
     # Output
     vision_steering /= 2
     steering = min(max(steering - vision_steering, -0.8), 0.8)
     acceleration = min(max(acceleration, -0.0), 0.4)
-#    motors.display("Steer: {0:.2f}".format(steering))
+    #motors.display("Steer: {0:.2f}".format(steering))
    
     # Pump the throttle 
     if( time.time() - acceleration_time > 1.0 ):
@@ -182,9 +181,8 @@ while not keys or not keys.esc_key_pressed:
     frame = process(frame)
 
     # Send this jpg image out to the websocket
-    if True:
-        jpg_frame = cv2.imencode(".jpg", frame)[1]
-        remote.send_frame(jpg_frame)
+    jpg_frame = cv2.imencode(".jpg", frame)[1]
+    remote.send_frame(jpg_frame)
 
     # Pump this frame out so we can see it remotely
     if video:
@@ -201,7 +199,16 @@ while not keys or not keys.esc_key_pressed:
         motors.setPWM(2, steering)
 
         # Accellerate
-        motors.setPWM(1, acceleration - 1.0)# + 0.5)
+        motors.setPWM(1, acceleration - 1.0)
+
+    # Read IMU
+    imu = motors.readIMU()
+    if imu is not None and imu != 0:
+        gy_sum -= imu['gz']
+    print(imu)
+    spaces = int(gy_sum/10)
+    gy_sum *= 0.9
+    print(" " * spaces + "*") 
 
     # Send the PWM pulse at most every 10ms
     if time.time() > lastPWM + 0.1:

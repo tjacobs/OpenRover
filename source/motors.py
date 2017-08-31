@@ -36,6 +36,18 @@ def display(string):
     sys.stdout.write("\r\x1b[K" + string)
     sys.stdout.flush()
 
+# Read IMU
+def readIMU(xy='ax'):
+    global board
+    if board == None:
+        return 0
+    board.getData(MultiWii.RAW_IMU)
+    if board.rawIMU == 0:
+        return None
+    else:
+        return board.rawIMU
+    #return 90.0 * board.rawIMU[xy] / 500.0 # Pitch
+
 # Init motors
 board = None
 tries = 0

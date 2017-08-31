@@ -23,25 +23,13 @@ def timing(f):
 
 # --------- Thresholding functions ----------
 
-def equalise_image(img): # Histogram normalization
-    img[:, :, 0] = cv2.equalizeHist(img[:, :, 0])
-    img[:, :, 1] = cv2.equalizeHist(img[:, :, 1])
-    img[:, :, 2] = cv2.equalizeHist(img[:, :, 2])
-    return img
-
+# Sharpen
+@timing
 def sharpen_image(img):
     gb = cv2.GaussianBlur(img, (5,5), 20.0)
     return cv2.addWeighted(img, 2, gb, -1, 0)
 
-def linear_image(img, s=1.0, m=0.0): # Compute linear image transformation img*s+m
-    img2=cv2.multiply(img, np.array([s]))
-    return cv2.add(img2, np.array([m]))
-
-def contrast_image(img, s=1.0): # Change image contrast; s>1 - increase
-    m=127.0*(1.0-s)
-    return lin_img(img, s, m)
-
-# Function that thresholds a channel of HLS
+# Treshold a channel of HLS
 @timing
 def hls_select(img, threshold, hls_option, invert = 0):
     # Convert to HLS color space
@@ -50,7 +38,6 @@ def hls_select(img, threshold, hls_option, invert = 0):
     # Apply a threshold to the channel
     s = invert * hls[:, :, hls_option]
     binary_output = np.zeros_like(img)
-#    binary_output[ (s>=0) ] = 255
     binary_output[ (s>threshold[0]) & (s<=threshold[1]) ] = 255
     
     # Return a binary image of threshold result
@@ -144,7 +131,7 @@ def sobel_threshold(img, orient='x', sobel_kernel=3, thresh=(0, 255)):
 @timing
 def threshold_image(image, v): # V = settings vector
 
-    #image = hls_select(image, (v[0], v[1]), min(max(v[2], 0), 1), 1)
+#    image = hls_select(image, (v[0], v[1]), min(max(v[2], 0), 1), 1)
 
     image = sobel_threshold(image, orient='x', sobel_kernel=3, thresh=(v[0], v[1]))
 
@@ -349,8 +336,8 @@ def pipeline(image, v):
         src = np.float32(
            [[image.shape[1] * 0.2, 0], 
             [image.shape[1] * 0.8, 0],
-            [-400,                 image.shape[0]],
-            [400+image.shape[1],   image.shape[0]]])
+            [-500,                 image.shape[0]],
+            [500+image.shape[1],   image.shape[0]]])
         dest = np.float32(
             [[0,              0],
              [image.shape[1], 0],
@@ -358,11 +345,15 @@ def pipeline(image, v):
              [image.shape[1], image.shape[0]]])
         M = cv2.getPerspectiveTransform(src, dest)
         Minv = cv2.getPerspectiveTransform(dest, src)
- 
+
+    image = sharpen_image(image)
+
+    image_in = image
+
     # Threshold the image to make the line edges stand out
     if threshold_on:
         image = threshold_image(image, v)
-
+    
     # Stretch the image out so we have a bird's-eye view of the scene
     if warp_on:
         image = warp_image(image)
@@ -385,34 +376,5 @@ def pipeline(image, v):
     # Draw those lines
     lanes_image = draw_lanes(image, left_line_x, centre_line_x, right_line_x, y, steer, speed)
 
-    # Return the image and steering command
-    if False and warp_on:
-        image_found = dewarp_image(image_found)
-        lanes_image = dewarp_image(lanes_image)
-        
-    return image, image_found, steer, speed
-
-
-# Bonus code
-    
-    # Update smoothed curve radius frame by frame, 20% each time
-#    if left_curverad and right_curverad:
-#        curve_radius = (left_curverad + right_curverad) / 2
-#    else:
-#        curve_radius = 0
-
-    # Figure out possible new steering position from current curve_radius
-#    if curve_radius > 900 or curve_radius < -900:
-#        new_steering_position = 0
-#    elif curve_radius == 0:
-#        new_steering_position = 0
-#    else:
-#        new_steering_position = 50000.0 / curve_radius
-
-    # Update steering position 20% each time
-#    if new_steering_position == 0 or new_steering_position > 100 or new_steering_position < -100:
-#        pass
-#    else:
-#        steering_position += ( (new_steering_position - steering_position) / 20 )
-
+    return warp_image(image_in), image, steer, speed
  
