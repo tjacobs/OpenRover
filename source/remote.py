@@ -53,9 +53,19 @@ def process(text):
     elif text.startswith( 'right_mouse' ):
         right_mouse_down = (len(test.split()) > 1 and text.split()[1] == "down")
 
+# Send to websocket
+websocket = None
+def send_frame(frame):
+    global websocket
+    if websocket is not None:
+        print( "Sending frame" )
+        websocket.send(frame)
+
 # Process incoming websocket connections
 @asyncio.coroutine
-def new_websocket_connection(websocket, path):
+def new_websocket_connection(websocket_in, path):
+    global websocket
+    websocket = websocket_in
     print("Received websocket connection.")
     while True:
         text = yield from websocket.recv()

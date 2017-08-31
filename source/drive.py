@@ -70,8 +70,8 @@ except:
     print("No motors.")
 video = None
 try:
-	import video
-	video.resolution = resolution
+    import video
+    video.resolution = resolution
 except:
     print("No video.")
 try:
@@ -167,10 +167,15 @@ while not keys or not keys.esc_key_pressed:
     vision_steering /= 2
     steering = min(max(steering + vision_steering, -0.6), 0.6)
     acceleration = min(max(acceleration, -0.6), 0.6)
-    motors.display("Steer: {0:.2f}".format(steering))
+    #motors.display("Steer: {0:.2f}".format(steering))
 
     # Post process
     frame = process(frame)
+
+    # Send this jpg image out to the websocket
+    if False:
+        jpg_frame = cv2.imencode(".jpg", frame)[1]
+        remote.send_frame(jpg_frame)
 
     # Pump this frame out so we can see it remotely
     if video:
