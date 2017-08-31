@@ -35,7 +35,7 @@ thread = Thread(target=thread_function, args=(loop,))
 thread.start()
 def process(text):
     global x, y, left_mouse_down, right_mouse_down, left, right, up, down
-    print(text)
+    #print(text)
     if text.startswith( 'left' ):
         left = (len(text.split()) > 1 and text.split()[1] == "down")
     elif text.startswith( 'right' ):
@@ -54,22 +54,26 @@ def process(text):
         right_mouse_down = (len(test.split()) > 1 and text.split()[1] == "down")
 
 # Send to websocket
-websocket = None
-def send_frame(frame):
-    global websocket
-    if websocket is not None:
-        print( "Sending frame" )
-        websocket.send(frame)
+frame = None
+def send_frame(frame_in):
+    global frame
+    frame = frame_in
 
 # Process incoming websocket connections
 @asyncio.coroutine
-def new_websocket_connection(websocket_in, path):
-    global websocket
-    websocket = websocket_in
+def new_websocket_connection(websocket, path):
+    global frame
     print("Received websocket connection.")
     while True:
-        text = yield from websocket.recv()
-        process(text)
+#        text = yield from websocket.recv()
+#        process(text)
+
+        # Send if frame available to send
+        if frame is not None:
+            yield from websocket.send(bytes(frame))
+            frame = None
+        time.sleep(0.01)
+
 
 # Get IP address
 import socket

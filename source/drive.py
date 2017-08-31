@@ -173,7 +173,7 @@ while not keys or not keys.esc_key_pressed:
     frame = process(frame)
 
     # Send this jpg image out to the websocket
-    if False:
+    if True:
         jpg_frame = cv2.imencode(".jpg", frame)[1]
         remote.send_frame(jpg_frame)
 
