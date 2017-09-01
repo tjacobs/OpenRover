@@ -29,6 +29,59 @@ elif os.uname()[1] == "odroid":
 # Start
 print("Starting OpenRover on " + str(os.uname()[1]))
 
+import pigpio
+pi = pigpio.pi()
+
+print("1000")
+
+#pi.hardware_PWM(18, 50, 1000)
+
+pi.set_PWM_range(17, 1000)
+pi.set_PWM_range(27, 1000)
+pi.set_PWM_frequency(17, 50)
+pi.set_PWM_frequency(27, 50)
+i = 0
+import math
+while True:
+	i += 1
+	v = int((math.sin(i/100)+1) * 300) + 900
+	v2 = int((math.sin(i/100)+1) * 100) + 1000
+	print( v2 )
+	pi.set_servo_pulsewidth( 17, v )
+	pi.set_servo_pulsewidth( 27, v2 )
+	if v == 900 or v == 1499:
+#		pi.set_PWM_frequency(17, 0)
+		pi.set_PWM_dutycycle(17, 0)
+		time.sleep(1)
+		i += 100
+#		pi.set_PWM_frequency(17, 50)
+		pi.set_PWM_dutycycle(17, 50)
+
+	time.sleep(0.01)
+
+pi.set_PWM_dutycycle(27, 20)
+time.sleep(3)
+
+print("1500")
+pi.set_PWM_dutycycle(17, 500)
+pi.set_PWM_dutycycle(27, 500)
+
+#print(pi.hardware_PWM(18, 50, 1500))
+time.sleep(3)
+
+print("1900")
+pi.set_PWM_dutycycle(17, 900)
+pi.set_PWM_dutycycle(27, 900)
+#print(pi.hardware_PWM(18, 50, 1800))
+time.sleep(3)
+
+print("1200")
+pi.set_PWM_dutycycle(17, 200)
+pi.set_PWM_dutycycle(27, 200)
+#print(pi.hardware_PWM(18, 50, 1200))
+time.sleep(10)
+exit()
+
 # Start camera
 try:
 	import camera
