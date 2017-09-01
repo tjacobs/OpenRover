@@ -11,6 +11,15 @@ import os
 import math
 import functions
 
+# Import Raspberry PI PIGPIO if present
+if os.uname()[1] == "raspberrypi":
+    pi = None
+    try:
+        import pigpio
+        pi = pigpio.pi()
+    except:
+        print("No pi PWM output.")
+
 # Import Beagle Bone Blue robot motor controller if present
 rcpy = None
 if os.uname()[1] == "beaglebone":
@@ -52,7 +61,16 @@ def readIMU(xy='ax'):
 board = None
 tries = 0
 def initMotors():
-    global board, tries
+    global board, tries, pi
+    
+    # Try raspberry pi direct PWM output
+    if os.uname()[1] == "raspberrypi":
+        print("Started pi motors")
+        pi.set_PWM_range(17, 1000)
+        pi.set_PWM_range(27, 1000)
+        pi.set_PWM_frequency(17, 50)
+        pi.set_PWM_frequency(27, 50)
+	
     try:
         board = MultiWii("/dev/ttyACM0")
     except:
@@ -202,6 +220,29 @@ def servosOff():
 
 # Sends a single PWM pulse command to the motors
 def runPWM(number):
+    global number1, number2, pi
+
+    # Raspberry Pi direct PWM output
+    if os.uname()[1] == "raspberrypi":
+        gpio = 0
+        if number == 1:
+            gpio = 17
+            n = number1
+        elif number == 2:
+            gpio = 27
+            n = number2
+        value = int(900 + (n+1)*500)
+        value = min(max(value, 500), 2500)
+        print( gpio, value )
+        pi.set_servo_pulsewidth( gpio, value )
+
+        if False:
+            # Stop pulsing
+            pi.set_PWM_dutycycle(17, 0)
+        if False:
+            # Start pulsing
+            pi.set_PWM_dutycycle(17, 50)
+
     # If Beagle Bone Blue robotic cape support
     if rcpy:
         try:
@@ -212,9 +253,8 @@ def runPWM(number):
                 servo2.run()
         except:
             pass
-    else:
+    elif pi is None:
         # Else output to Betaflight style motor controller
-        global number1, number2
         if number == 1: # Only send if the first motor is pulsed, as we send for all motors in one message
             sendMotorCommands([0, 100.0 * number1, 100.0 * number2], False)
 

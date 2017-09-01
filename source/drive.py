@@ -29,59 +29,6 @@ elif os.uname()[1] == "odroid":
 # Start
 print("Starting OpenRover on " + str(os.uname()[1]))
 
-import pigpio
-pi = pigpio.pi()
-
-print("1000")
-
-#pi.hardware_PWM(18, 50, 1000)
-
-pi.set_PWM_range(17, 1000)
-pi.set_PWM_range(27, 1000)
-pi.set_PWM_frequency(17, 50)
-pi.set_PWM_frequency(27, 50)
-i = 0
-import math
-while True:
-	i += 1
-	v = int((math.sin(i/100)+1) * 300) + 900
-	v2 = int((math.sin(i/100)+1) * 100) + 1000
-	print( v2 )
-	pi.set_servo_pulsewidth( 17, v )
-	pi.set_servo_pulsewidth( 27, v2 )
-	if v == 900 or v == 1499:
-#		pi.set_PWM_frequency(17, 0)
-		pi.set_PWM_dutycycle(17, 0)
-		time.sleep(1)
-		i += 100
-#		pi.set_PWM_frequency(17, 50)
-		pi.set_PWM_dutycycle(17, 50)
-
-	time.sleep(0.01)
-
-pi.set_PWM_dutycycle(27, 20)
-time.sleep(3)
-
-print("1500")
-pi.set_PWM_dutycycle(17, 500)
-pi.set_PWM_dutycycle(27, 500)
-
-#print(pi.hardware_PWM(18, 50, 1500))
-time.sleep(3)
-
-print("1900")
-pi.set_PWM_dutycycle(17, 900)
-pi.set_PWM_dutycycle(27, 900)
-#print(pi.hardware_PWM(18, 50, 1800))
-time.sleep(3)
-
-print("1200")
-pi.set_PWM_dutycycle(17, 200)
-pi.set_PWM_dutycycle(27, 200)
-#print(pi.hardware_PWM(18, 50, 1200))
-time.sleep(10)
-exit()
-
 # Start camera
 try:
 	import camera
@@ -133,17 +80,15 @@ except:
     print("No remote.")
 
 # Calibrate ESC if it's just the one
-if False and not differential:
+if True and not differential:
     print( "Starting speed controller." )
     motors.setPWM(1, 1.0)
     motors.startPWM(1, 0.005)
     motors.runPWM(1)
-#    print("Max")
-    time.sleep(1)
+    time.sleep(2)
     motors.setPWM(1, -1.0)
     motors.runPWM(1)
-#    print("Min")
-    time.sleep(1)
+    time.sleep(2)
  
 # Our outputs
 steering = 0.0
@@ -184,6 +129,7 @@ sys.stdout.flush()
 v = [20, 170, 2]
 gy_sum = 0
 
+motors.initMotors()
 print("Running.")
 while not keys or not keys.esc_key_pressed:
     # Remote controls
@@ -193,9 +139,9 @@ while not keys or not keys.esc_key_pressed:
         if remote.down:
            acceleration -= 0.19
         if remote.right:
-           steering += 0.19
+           steering -= 0.09
         if remote.left:
-           steering -= 0.19
+           steering += 0.09
 
     # Slow down
     acceleration *= 0.9
@@ -209,13 +155,13 @@ while not keys or not keys.esc_key_pressed:
         frame = newFrame
 
     # Run through our machine vision pipeline
-    vision_frame1, vision_frame2, vision_steering, vision_speed = vision.pipeline(frame, v)
-    #vision_steering = 0
-    acceleration = 0.3
+#    vision_frame1, vision_frame2, vision_steering, vision_speed = vision.pipeline(frame, v)
+    vision_steering = 0
+    acceleration = 0.5
 
     # Combine frames for Terminator-vision
     #frame = cv2.addWeighted(frame, 0.7, vision_frame1, 0.3, 0)
-    frame = cv2.addWeighted(vision_frame1, 0.8, vision_frame2, 0.2, 0)
+ #   frame = cv2.addWeighted(vision_frame1, 0.8, vision_frame2, 0.2, 0)
     
     # Output
     vision_steering /= 4
@@ -224,7 +170,7 @@ while not keys or not keys.esc_key_pressed:
     #motors.display("Steer: {0:.2f}".format(steering))
    
     # Pump the throttle 
-    if( time.time() - acceleration_time > 1.0 ):
+    if( time.time() - acceleration_time > 2.0 ):
         acceleration = 0
         steering = 0
     if( time.time() - acceleration_time > 4.0 ):
@@ -254,6 +200,7 @@ while not keys or not keys.esc_key_pressed:
         # Accelerate
         motors.setPWM(1, acceleration - 1.0)
 
+    '''
     # Read IMU
     imu = motors.readIMU()
     if imu is not None and imu != 0:
@@ -262,9 +209,10 @@ while not keys or not keys.esc_key_pressed:
     spaces = int(gy_sum/10) + 10
     gy_sum *= 0.9
     print(" " * spaces + "*") 
+    '''
 
     # Send the PWM pulse at most every 10ms
-    if time.time() > lastPWM + 0.1:
+    if time.time() > lastPWM + 0.01:
         motors.runPWM(1)
         motors.runPWM(2)
         lastPWM = time.time()
