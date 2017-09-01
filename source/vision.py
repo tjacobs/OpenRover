@@ -184,7 +184,7 @@ def find_lanes(image):
     rightx_current = rightx_base
 
     # Set the width of the windows +/- margin
-    margin = 30
+    margin = 60
 
     # Set minimum number of pixels found to recenter window
     minpix = 4
