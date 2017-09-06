@@ -13,7 +13,9 @@ sudo apt-get install -y libglew-dev
 
 git clone https://github.com/stevenlovegrove/Pangolin.git
 cd Pangolin
+sed -i '1s/^/#include <stdexcept>\n/' src/log/packetstream.cpp
 mkdir build
+cd build
 cmake ..
 make
 sudo make install
