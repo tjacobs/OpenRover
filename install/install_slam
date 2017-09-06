@@ -1,0 +1,24 @@
+#!/bin/bash
+
+# Installs SLAM.
+echo ""
+echo "Installing SLAM."
+
+# Cd into this install dir if run from up one level
+if [ -d install ]; then
+    cd install
+fi
+
+sudo apt-get install -y libglew-dev
+
+git clone https://github.com/stevenlovegrove/Pangolin.git
+cd Pangolin
+mkdir build
+cmake ..
+make
+sudo make install
+
+git clone https://github.com/raulmur/ORB_SLAM2.git
+cd ORB_SLAM2
+source build.sh
+
