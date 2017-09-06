@@ -3,14 +3,18 @@
 # Installs SLAM.
 echo ""
 echo "Installing SLAM."
+pwd=`pwd`
 
 # Cd into this install dir if run from up one level
 if [ -d install ]; then
     cd install
 fi
 
+# Install requirements
 sudo apt-get install -y libglew-dev
+sudo apt-get install -y libeigen3-dev
 
+if [ ! -d Pangolin ]; then
 git clone https://github.com/stevenlovegrove/Pangolin.git
 cd Pangolin
 sed -i '1s/^/#include <stdexcept>\n/' src/log/packetstream.cpp
@@ -19,8 +23,12 @@ cd build
 cmake ..
 make
 sudo make install
+fi
 
+cd $pwd
 git clone https://github.com/raulmur/ORB_SLAM2.git
 cd ORB_SLAM2
 source build.sh
+cd build
+make
 
