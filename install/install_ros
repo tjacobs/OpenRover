@@ -1,0 +1,26 @@
+#!/bin/bash
+
+# Install ROS
+echo ""
+echo "Installing ROS."
+pwd=`pwd`
+
+# You may need to install this to resolve install issues if you get "is not going to be installed" errors
+sudo apt-get install -y libignition-math2
+
+# Install ROS
+sudo sh -c 'echo "deb http://packages.ros.org/ros/ubuntu $(lsb_release -sc) main" > /etc/apt/sources.list.d/ros-latest.list'
+sudo apt-key adv --keyserver hkp://ha.pool.sks-keyservers.net:80 --recv-key 421C365BD9FF1F717815A3895523BAEEB01FA116
+sudo apt-get update
+sudo apt-get install -y ros-kinetic-desktop-full
+sudo apt-get install -y python-rosinstall
+
+# Init ROS
+sudo rosdep init
+rosdep update
+
+# Config ROS
+echo "source /opt/ros/kinetic/setup.bash" >> ~/.bashrc
+source ~/.bashrc
+
+echo "Done."
