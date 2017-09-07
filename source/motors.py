@@ -12,8 +12,8 @@ import math
 import functions
 
 # Import Raspberry PI PIGPIO if present
+pi = None
 if os.uname()[1] == "raspberrypi":
-    pi = None
     try:
         import pigpio
         pi = pigpio.pi()
