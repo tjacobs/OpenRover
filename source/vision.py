@@ -346,6 +346,12 @@ def pipeline(image, v):
         M = cv2.getPerspectiveTransform(src, dest)
         Minv = cv2.getPerspectiveTransform(dest, src)
 
+    image = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
+    image = cv2.GaussianBlur(image, (7,7), 1.5)
+    image = cv2.Canny(image, 30, 3)
+
+    return image, image, 0, 0
+
     image = sharpen_image(image)
 
     image_in = image

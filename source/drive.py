@@ -15,6 +15,7 @@ if os.uname()[1] == "odroid":
 
 # Camera capture, vision processing, and video transmission resolution
 resolution = (320, 240)
+resolution = (640, 480) # Getting about 2 FPS
 video_number = 0
 if os.uname()[1] == "beaglebone":
     resolution = (320, 240)
@@ -80,7 +81,7 @@ except:
     print("No remote.")
 
 # Calibrate ESC if it's just the one
-if True and not differential:
+if False and not differential:
     print( "Starting speed controller." )
     motors.setPWM(1, 1.0)
     motors.startPWM(1, 0.005)
@@ -135,13 +136,13 @@ while not keys or not keys.esc_key_pressed:
     # Remote controls
     if remote:
         if remote.up:
-            acceleration += 0.19
+            acceleration += 0.39
         if remote.down:
            acceleration -= 0.19
         if remote.right:
-           steering -= 0.09
+           steering -= 0.19
         if remote.left:
-           steering += 0.09
+           steering += 0.19
 
     # Slow down
     acceleration *= 0.9
@@ -155,28 +156,26 @@ while not keys or not keys.esc_key_pressed:
         frame = newFrame
 
     # Run through our machine vision pipeline
-#    vision_frame1, vision_frame2, vision_steering, vision_speed = vision.pipeline(frame, v)
+    vision_frame1, vision_frame2, vision_steering, vision_speed = vision.pipeline(frame, v)
     vision_steering = 0
-    acceleration = 0.5
+    frame = vision_frame1
 
     # Combine frames for Terminator-vision
     #frame = cv2.addWeighted(frame, 0.7, vision_frame1, 0.3, 0)
  #   frame = cv2.addWeighted(vision_frame1, 0.8, vision_frame2, 0.2, 0)
     
+    # Pump the throttle for a second every five seconds
+    if( time.time() - acceleration_time < 0.5 ):
+        pass
+        #acceleration = 0.25
+    if( time.time() - acceleration_time > 4.0 ):
+        acceleration_time = time.time()
+
     # Output
     vision_steering /= 4
     steering = min(max(steering - vision_steering, -0.8), 0.8)
-    acceleration = min(max(acceleration, -0.0), 0.4)
-    #motors.display("Steer: {0:.2f}".format(steering))
+    acceleration = min(max(acceleration, 0.0), 0.5)
    
-    # Pump the throttle 
-    if( time.time() - acceleration_time > 2.0 ):
-        acceleration = 0
-        steering = 0
-    if( time.time() - acceleration_time > 4.0 ):
-        acceleration_time = time.time()
-    #motors.display("Steer: {0:.2f}".format(steering))
-
     # Post process
     frame = process(frame)
 
@@ -195,7 +194,7 @@ while not keys or not keys.esc_key_pressed:
         motors.setPWM(2, acceleration - steering)
     else:
         # Steer Ackermann style
-        motors.setPWM(2, steering)
+        motors.setPWM(2, steering - 0.3)
 
         # Accelerate
         motors.setPWM(1, acceleration - 1.0)
@@ -216,13 +215,6 @@ while not keys or not keys.esc_key_pressed:
         motors.runPWM(1)
         motors.runPWM(2)
         lastPWM = time.time()
-
-    # Save frame to disk to debug
-    if False:
-        cv2.imwrite('out.png', frame) 
-        img = Image.open('out.png')
-        img.show()
-        break
 
     # Count frames per second
     frames_per_second_so_far += 1
