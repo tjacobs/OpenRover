@@ -44,7 +44,7 @@ except:
     print("No web.")
 keys = None
 try:
-    if os.uname()[1] != "beaglebone" and os.uname()[1] != "Thomass-Air":
+    if os.uname()[1] != "beaglebone" and os.uname()[1] != "Thomass-Air" and os.uname()[1] != "Thomass-MacBook-Air.local":
         import keys
 except:
     print("No keyboard.")
@@ -65,7 +65,8 @@ try:
 except:
     pass
 try:
-    import motors
+    if os.uname()[1] != "Thomass-Air" and os.uname()[1] != "Thomass-MacBook-Air.local":
+        import motors
 except:
     print("No motors.")
 video = None
@@ -80,7 +81,7 @@ except:
     print("No remote.")
 
 # Calibrate ESC if it's just the one
-if True and not differential:
+if False and not differential:
     print( "Starting speed controller." )
     motors.setPWM(1, 1.0)
     motors.startPWM(1, 0.005)
@@ -93,6 +94,23 @@ if True and not differential:
 # Our outputs
 steering = 0.0
 acceleration = 0.0
+
+'''
+# Run over the video
+from moviepy.editor import VideoFileClip
+
+# Define video function
+def create_video(pipeline_in, input_video, output_video):
+    # Process video
+    video = VideoFileClip( input_video )
+    video_processed = video.fl_image( pipeline_in )
+    video_processed.write_videofile( output_video, audio=False )
+
+# Create video
+create_video( vision.pipeline2, "/Users/thomasjacobs/Desktop/OpenRover/gor_640.mov", "/Users/thomasjacobs/Desktop/OpenRover/o.mp4" )
+
+exit()
+'''
 
 # Video frame post-processing step
 def process(image):
@@ -129,7 +147,8 @@ sys.stdout.flush()
 v = [20, 170, 2]
 gy_sum = 0
 
-motors.initMotors()
+if motors is not None:
+    motors.initMotors()
 print("Running.")
 while not keys or not keys.esc_key_pressed:
     # Remote controls
@@ -186,19 +205,20 @@ while not keys or not keys.esc_key_pressed:
         remote.send_frame(jpg_frame)
 
     # Pump this frame out so we can see it remotely
-    if video:
+    if video is not None:
         video.send_frame(frame)
 
-    if differential:
-        # Steer tank style
-        motors.setPWM(1, acceleration + steering)
-        motors.setPWM(2, acceleration - steering)
-    else:
-        # Steer Ackermann style
-        motors.setPWM(2, steering)
+    if motors is not None:
+        if differential:
+            # Steer tank style
+            motors.setPWM(1, acceleration + steering)
+            motors.setPWM(2, acceleration - steering)
+        else:
+            # Steer Ackermann style
+            motors.setPWM(2, steering)
 
-        # Accelerate
-        motors.setPWM(1, acceleration - 1.0)
+            # Accelerate
+            motors.setPWM(1, acceleration - 1.0)
 
     '''
     # Read IMU
