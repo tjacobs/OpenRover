@@ -231,9 +231,9 @@ def runPWM(number):
         elif number == 2:
             gpio = 27
             n = number2
-        value = int(900 + (n+1)*500)
-        value = min(max(value, 500), 2500)
-        print( gpio, value )
+        value = int(1000 + (n+1)*500)
+        value = min(max(value, 1000), 2000)
+        #print( gpio, value )
         pi.set_servo_pulsewidth( gpio, value )
 
         if False:
