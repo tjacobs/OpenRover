@@ -147,13 +147,15 @@ while not keys or not keys.esc_key_pressed:
     # Remote controls
     if remote:
         if remote.up:
-            acceleration += 2.59 * dt
+            acceleration += 8 * dt
         if remote.down:
-           acceleration -= 0.59 * dt
+           acceleration -= 5 * dt
         if remote.right:
-           steering -= 0.5 * dt
+           steering -= 0.9 * dt
         if remote.left:
-           steering += 0.5 * dt
+           steering += 0.9 * dt
+
+    acceleration += 6 * dt
 
     # Slow down
     acceleration *= (1.0 - (0.5 * dt))
@@ -175,7 +177,7 @@ while not keys or not keys.esc_key_pressed:
     vision_steering = vision.steer
     vision_speed = vision.speed
     
-    vision_steering = 0
+    #vision_steering = 0
 
     # Pump the throttle for a second every five seconds
     if( time.time() - acceleration_time > 0.5 ):
@@ -183,9 +185,12 @@ while not keys or not keys.esc_key_pressed:
     if( time.time() - acceleration_time > 1.0 ):
         acceleration_time = time.time()
 
+#    print(vision_steering)
+
     # Output
-    vision_steering /= 4
-    steering = min(max(steering - vision_steering, -0.8), 0.8)
+#    vision_steering /= 60
+    #steering = min(max((steering + vision_steering), -0.8), 0.8)
+    steering = min(max(vision_steering, -0.8), 0.8)
     acceleration = min(max(acceleration, 0.0), 0.5)
    
     # Post process

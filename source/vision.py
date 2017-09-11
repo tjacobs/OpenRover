@@ -339,13 +339,17 @@ def draw_lines(img, lines, color=[255, 0, 0], thickness=5):
     if lines is None:
 #        cv2.line(img, (int(left_line_x1), int(left_line_y1)), (int(left_line_x2), int(left_line_y2)), [255,255,255], 12) #draw left line
 #        cv2.line(img, (int(right_line_x1), int(right_line_y1)), (int(right_line_x2), int(right_line_y2)), [255,255,255], 12) #draw left line
-        return img
+        return img, 0
     
     # Go through lines, bucket into left lines and right lines based on slope
     for line in lines:
         for x1,y1,x2,y2 in line:
-            cv2.line(img, (x1, y1), (x2, y2), color, 1)
-            m = ((y1-y2)/(x1-x2)) # Calculate slope
+            cv2.line(img, (x1+50, y1+90), (x2+50, y2+90), color, 1)
+            m = 0
+            try:
+                m = ((x1-x2)/(y1-y2)) # Calculate slope
+            except:
+                pass
             import math
             angle = math.atan2(y1-y2, x1-x2)
             lines_found.append( (m, x1, y1) )
@@ -362,20 +366,22 @@ def draw_lines(img, lines, color=[255, 0, 0], thickness=5):
     median_y = 0
     median_angle = 0
 
-    print( "Lines" )
-    for line in sorted(lines_found):
-        print( line )
+    #print( "Lines" )
+    #for line in sorted(lines_found):
+    #    print( line )
 
     if len(lines_found) > 1:
         median_angle, median_x, median_y = sorted(lines_found)[int(len(lines_found)/2)]
-    left_length = 200
-    l2x = median_x + left_length
-    l2y = median_y + left_length * median_angle
+    median_x = 160
+    median_y = 120
+    left_length = 100
+    l2x = median_x + left_length * median_angle
+    l2y = median_y + left_length * 1
     line2 = ((int(median_x), int(median_y)), (int(l2x), int(l2y)))
-    print(line2)
-    cv2.line(img, (int(median_x), int(median_y)), (int(l2x), int(l2y)), color, 3)
+    cv2.line(img, (int(median_x), int(median_y)), (int(l2x), int(l2y)), [0,255,0], 3)
+ 
 
-    return img
+    return img, median_angle
 
 
 # -------------- The pipeline --------------
@@ -405,11 +411,11 @@ def pipeline(image):
         M = cv2.getPerspectiveTransform(src, dest)
         Minv = cv2.getPerspectiveTransform(dest, src)
     
+    # Warp
+    image = warp_image(image)
     # Save original
     image_original = image
 
-    # Warp
-    image = warp_image(image)
 
     # Find Lines Method 1: Blur and Canny. Lots of wiggles.
 #    image = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
@@ -418,49 +424,60 @@ def pipeline(image):
 #    image = cv2.cvtColor(gray, cv2.COLOR_GRAY2BGR)
 
     # Find Lines Method 2: Bilateral and Canny. Pretty good.
-#    gray = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
-#    gray = cv2.bilateralFilter(gray, 11, 17, 17)
-#    gray = cv2.Canny(gray, 30, 200)
+    gray = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
+    gray = cv2.bilateralFilter(gray, 11, 17, 17)
+    image = cv2.Canny(gray, 30, 200)
 #    image = cv2.cvtColor(gray, cv2.COLOR_GRAY2BGR)
 
     # Find Lines Method 3: Sharpen and Sobel x. Nice.
 #    image = sharpen_image(image)
 #    image = sobel_threshold(image, orient='x', sobel_kernel=3, thresh=(20, 160))
-#    gray = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
+#    image = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
 
     # Find Lines Method 4: Filter blue colour
-    hsv = cv2.cvtColor(image, cv2.COLOR_BGR2HSV)
-    lower_blue = np.array([90, 10, 10])
-    upper_blue = np.array([140, 235, 235])
-    image = cv2.inRange(hsv, lower_blue, upper_blue)
+#    hsv = cv2.cvtColor(image, cv2.COLOR_BGR2HSV)
+#    lower_blue = np.array([90, 10, 10])
+#    upper_blue = np.array([120, 135, 135])
+#    image = cv2.inRange(hsv, lower_blue, upper_blue)
 
+    cropped_image = image[90:170, 50:320-50]
+    
     # Find lines and draw them
-    lines = hough_lines(image, 1, np.pi/180, 20, min_line_len=10, max_line_gap=90)
+    lines = hough_lines(cropped_image, 1, np.pi/180, 20, min_line_len=10, max_line_gap=90)
     lines_image = np.zeros((image.shape[0], image.shape[1], 3), dtype=np.uint8)
-#    draw_lines(lines_image, lines, [255, 0, 0], 1)
+    lines_image, steer = draw_lines(lines_image, lines, [0, 0, 255], 1)
 
     # Find curved lines
-#    im2, cnts, hi = cv2.findContours(image.copy(), cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE)
-#    cnts = sorted(cnts, key = cv2.contourArea, reverse = True)[:5]
-#    screenCnt = None
-#    for c in cnts: 
-#       peri = cv2.arcLength(c, True)
-#        approx = cv2.approxPolyDP(c, 0.02 * peri, True) 
-#        if len(approx) > 2:
-#            screenCnt = approx
-#            break
-#    for i in range(len(cnts)):
-#        cv2.drawContours(image, cnts, i, (i*10 % 255, i*20 % 155, 200), 2)
+#    image2, contours, hi = cv2.findContours(cropped_image, cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE)
+#    contours = sorted(contours, key = cv2.contourArea, reverse = True)#[:5]
+     
+#    poly_fit = np.polyfit(y, x, 2)
 
+#    for c in contours: 
+#       perimeter_length = cv2.arcLength(c, True)
+#       poly = cv2.approxPolyDP(c, 0.02 * perimeter_length, True) 
+    
     image = cv2.cvtColor(image, cv2.COLOR_GRAY2BGR)
+
+    #print("Cont" )
+    #print( contours[0] )
+    #for c in contours:
+    #    print( c[0] )
+        #contours[i] = contours[i][0]
+    
+#    for i in range(len(contours)):
+#        cv2.drawContours(image, contours, i, (i*10 % 255, i*50 % 255, 250), 2)
+
 #    image = cv2.addWeighted(image_original, 0.2, image, 0.8, 0)
 
 #    image_out = cv2.addWeighted(image_original, 0.2, lines_image, 0.8, 0)
 
-    image = dewarp_image(image)
+#    image = dewarp_image(image)
+#    lines_image = dewarp_image(lines_image)
 
-    image = cv2.addWeighted(image_original, 0.5, image, 0.5, 0)
-    return image, 0, 0
+    #image = cv2.addWeighted(image, 0.5, image_original, 0.5, 0)
+    image = cv2.addWeighted(image_original, 0.3, lines_image, 0.7, 0)
+    return image, steer, 0
 
 
     #frame = cv2.addWeighted(frame, 0.7, vision_frame1, 0.3, 0)
