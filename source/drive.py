@@ -15,7 +15,7 @@ if os.uname()[1] == "odroid":
 
 # Camera capture, vision processing, and video transmission resolution
 resolution = (320, 240)
-resolution = (640, 480) # Getting about 2 FPS
+#resolution = (640, 480) # Getting about 2 FPS
 video_number = 0
 if os.uname()[1] == "beaglebone":
     resolution = (320, 240)
@@ -158,20 +158,21 @@ while not keys or not keys.esc_key_pressed:
     else:
         frame = newFrame
 
-    # Run through our machine vision pipeline
-    vision_frame1, vision_frame2, vision_steering, vision_speed = vision.pipeline(frame)
-    vision_steering = 0
-    frame = vision_frame1
+    # Send the frame to vision    
+    vision.camera_frame = frame
 
-    # Combine frames for Terminator-vision
-    #frame = cv2.addWeighted(frame, 0.7, vision_frame1, 0.3, 0)
- #   frame = cv2.addWeighted(vision_frame1, 0.8, vision_frame2, 0.2, 0)
+
+    # Read the latest processed frame
+    frame = vision.frame
+    vision_steering = vision.steer
+    vision_speed = vision.speed
     
+    vision_steering = 0
+
     # Pump the throttle for a second every five seconds
-    if( time.time() - acceleration_time < 0.5 ):
-        pass
-        #acceleration = 0.25
-    if( time.time() - acceleration_time > 4.0 ):
+    if( time.time() - acceleration_time < 1 ):
+        acceleration = 0.28
+    if( time.time() - acceleration_time > 3.0 ):
         acceleration_time = time.time()
 
     # Output

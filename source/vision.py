@@ -3,6 +3,7 @@ import numpy as np
 from PIL import Image   
 import time
 import glob
+from threading import Thread
 
 # Options
 warp_on = True
@@ -387,7 +388,7 @@ def pipeline(image):
     global warp_on, threshold_on
     
     # Blank equals blank
-    if image is None: return None, None, 0, 0
+    if image is None: return None, 0, 0
 
     # Define source, dest and matricies for perspective stretch and stretch back
     if M is None:
@@ -403,12 +404,12 @@ def pipeline(image):
              [image.shape[1], image.shape[0]]])
         M = cv2.getPerspectiveTransform(src, dest)
         Minv = cv2.getPerspectiveTransform(dest, src)
+    
+    # Save original
+    image_original = image
 
     # Warp
     image = warp_image(image)
-
-    # Save original
-    image_original = image
 
     # Find Lines Method 1: Blur and Canny. Lots of wiggles.
 #    image = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
@@ -429,8 +430,8 @@ def pipeline(image):
 
     # Find Lines Method 4: Filter blue colour
     hsv = cv2.cvtColor(image, cv2.COLOR_BGR2HSV)
-    lower_blue = np.array([100, 10, 10])
-    upper_blue = np.array([170, 255, 255])
+    lower_blue = np.array([90, 10, 10])
+    upper_blue = np.array([140, 235, 235])
     image = cv2.inRange(hsv, lower_blue, upper_blue)
 
     # Find lines and draw them
@@ -456,10 +457,13 @@ def pipeline(image):
 
 #    image_out = cv2.addWeighted(image_original, 0.2, lines_image, 0.8, 0)
 
-#    image = dewarp_image(image)
+    image = dewarp_image(image)
 
-    return image, lines_image, 0, 0
+    image = cv2.addWeighted(image_original, 0.5, image, 0.5, 0)
+    return image, 0, 0
 
+
+    #frame = cv2.addWeighted(frame, 0.7, vision_frame1, 0.3, 0)
 
     image = sharpen_image(image)
 
@@ -492,4 +496,20 @@ def pipeline(image):
     lanes_image = draw_lanes(image, left_line_x, centre_line_x, right_line_x, y, steer, speed)
 
     return warp_image(image_in), image, steer, speed
- 
+
+# Main loop thread
+camera_frame = None
+frame = None
+steer = 0
+speed = 0
+def vision_function():
+    global camera_frame, frame, steer, speed
+    while True:
+        frame, steer, speed = pipeline(camera_frame)
+        print( "One frame" )
+        time.sleep(0.1)
+
+# Start thread
+print("Starting vision.")
+thread = Thread(target=vision_function, args=())
+thread.start() 
