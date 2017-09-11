@@ -65,6 +65,7 @@ try:
     import matplotlib.image as mpimg
 except:
     pass
+motors = None
 try:
     if os.uname()[1] != "Thomass-Air" and os.uname()[1] != "Thomass-MacBook-Air.local":
         import motors
@@ -95,23 +96,6 @@ if False and not differential:
 # Our outputs
 steering = 0.0
 acceleration = 0.0
-
-'''
-# Run over the video
-from moviepy.editor import VideoFileClip
-
-# Define video function
-def create_video(pipeline_in, input_video, output_video):
-    # Process video
-    video = VideoFileClip( input_video )
-    video_processed = video.fl_image( pipeline_in )
-    video_processed.write_videofile( output_video, audio=False )
-
-# Create video
-create_video( vision.pipeline2, "/Users/thomasjacobs/Desktop/OpenRover/gor_640.mov", "/Users/thomasjacobs/Desktop/OpenRover/o.mp4" )
-
-exit()
-'''
 
 # Video frame post-processing step
 def process(image):
@@ -219,6 +203,12 @@ while not keys or not keys.esc_key_pressed:
             # Accelerate
             motors.setPWM(1, acceleration - 1.0)
 
+        # Send the PWM pulse at most every 10ms
+        if time.time() > lastPWM + 0.01:
+            motors.runPWM(1)
+            motors.runPWM(2)
+            lastPWM = time.time()
+
     '''
     # Read IMU
     imu = motors.readIMU()
@@ -229,12 +219,6 @@ while not keys or not keys.esc_key_pressed:
     gy_sum *= 0.9
     print(" " * spaces + "*") 
     '''
-
-    # Send the PWM pulse at most every 10ms
-    if time.time() > lastPWM + 0.01:
-        motors.runPWM(1)
-        motors.runPWM(2)
-        lastPWM = time.time()
 
     # Count frames per second
     frames_per_second_so_far += 1
