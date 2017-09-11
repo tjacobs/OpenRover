@@ -502,11 +502,24 @@ camera_frame = None
 frame = None
 steer = 0
 speed = 0
+frames_per_second_so_far = 0
+frames_per_second = 0
+time_start = 0
 def vision_function():
     global camera_frame, frame, steer, speed
+    global frames_per_second_so_far, frames_per_second, time_start
     while True:
+        # Process
         frame, steer, speed = pipeline(camera_frame)
-        print( "One frame" )
+
+        # Count frames per second
+        frames_per_second_so_far += 1
+        if( time.time() - time_start > 1.0 ):
+            frames_per_second = frames_per_second_so_far
+            frames_per_second_so_far = 0
+            time_start = time.time()
+
+        # Don't hog the CPU
         time.sleep(0.1)
 
 # Start thread

@@ -102,7 +102,7 @@ def process(image):
     # Just put text over it
     global frames_per_second, steering, acceleration
     cv2.putText(image, "OpenRover", (10, 20), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (255, 215, 215), 1)
-    cv2.putText(image, "FPS: {}".format(frames_per_second), (250, 20), cv2.FONT_HERSHEY_SIMPLEX, 0.4, (255, 195, 195), 1)
+    cv2.putText(image, "FPS: {}".format(vision.frames_per_second), (250, 20), cv2.FONT_HERSHEY_SIMPLEX, 0.4, (255, 195, 195), 1)
     cv2.putText(image, "Steering: {0:.2f}".format(steering), (140, 20), cv2.FONT_HERSHEY_SIMPLEX, 0.4, (255, 195, 195), 1)
     cv2.putText(image, "Acceleration: {0:.2f}".format(acceleration), (140, 40), cv2.FONT_HERSHEY_SIMPLEX, 0.4,(255, 195, 195), 1)
     cv2.putText(image, "Controls: w a s d".format(), (10, 40), cv2.FONT_HERSHEY_SIMPLEX, 0.4, (195, 195, 195), 1)
@@ -135,22 +135,30 @@ gy_sum = 0
 if motors is not None:
     motors.initMotors()
 print("Running.")
+time_now = 0
+old_time = 0
+dt = 0
 while not keys or not keys.esc_key_pressed:
+    # Calculate dt   
+    time_now = time.time()
+    dt = time_now - old_time
+    old_time = time_now
+
     # Remote controls
     if remote:
         if remote.up:
-            acceleration += 0.39
+            acceleration += 2.59 * dt
         if remote.down:
-           acceleration -= 0.19
+           acceleration -= 0.59 * dt
         if remote.right:
-           steering -= 0.19
+           steering -= 0.5 * dt
         if remote.left:
-           steering += 0.19
+           steering += 0.5 * dt
 
     # Slow down
-    acceleration *= 0.9
-    steering *= 0.9
-    
+    acceleration *= (1.0 - (0.5 * dt))
+    steering *=     (1.0 - (0.5 * dt))
+ 
     # Get a frame
     newFrame = camera.read()
     if newFrame is None:
@@ -170,9 +178,9 @@ while not keys or not keys.esc_key_pressed:
     vision_steering = 0
 
     # Pump the throttle for a second every five seconds
-    if( time.time() - acceleration_time < 1 ):
-        acceleration = 0.28
-    if( time.time() - acceleration_time > 3.0 ):
+    if( time.time() - acceleration_time > 0.5 ):
+        acceleration *= (1.0 - (40.0 * dt))
+    if( time.time() - acceleration_time > 1.0 ):
         acceleration_time = time.time()
 
     # Output
@@ -199,7 +207,7 @@ while not keys or not keys.esc_key_pressed:
             motors.setPWM(2, acceleration - steering)
         else:
             # Steer Ackermann style
-            motors.setPWM(2, steering - 0.3)
+            motors.setPWM(2, steering - 0.2)
 
             # Accelerate
             motors.setPWM(1, acceleration - 1.0)
