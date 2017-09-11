@@ -159,7 +159,7 @@ while not keys or not keys.esc_key_pressed:
         frame = newFrame
 
     # Run through our machine vision pipeline
-    vision_frame1, vision_frame2, vision_steering, vision_speed = vision.pipeline(frame, v)
+    vision_frame1, vision_frame2, vision_steering, vision_speed = vision.pipeline(frame)
     vision_steering = 0
     frame = vision_frame1
 

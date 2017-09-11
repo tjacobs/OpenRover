@@ -318,13 +318,71 @@ def draw_lanes(image, left_line_x, centre_line_x, right_line_x, y, steer, speed)
     # Done
     return draw_image
     
+def hough_lines(img, rho, theta, threshold, min_line_len, max_line_gap):
+    """
+    `img` should be the output of a Canny transform.
+        
+    """
+    lines = cv2.HoughLinesP(img, rho, theta, threshold, np.array([]), minLineLength=min_line_len, maxLineGap=max_line_gap)
+    return lines
+
+def draw_lines(img, lines, color=[255, 0, 0], thickness=5):
+    """
+    Draws lines on an image.
+    """    
+    right_lines = []
+    left_lines = []
+    lines_found = []
+
+    # If no input, draw big white lines on image from averaged time smoothed globals
+    if lines is None:
+#        cv2.line(img, (int(left_line_x1), int(left_line_y1)), (int(left_line_x2), int(left_line_y2)), [255,255,255], 12) #draw left line
+#        cv2.line(img, (int(right_line_x1), int(right_line_y1)), (int(right_line_x2), int(right_line_y2)), [255,255,255], 12) #draw left line
+        return img
+    
+    # Go through lines, bucket into left lines and right lines based on slope
+    for line in lines:
+        for x1,y1,x2,y2 in line:
+            cv2.line(img, (x1, y1), (x2, y2), color, 1)
+            m = ((y1-y2)/(x1-x2)) # Calculate slope
+            import math
+            angle = math.atan2(y1-y2, x1-x2)
+            lines_found.append( (m, x1, y1) )
+#            print(angle)
+#            if m <= LEFT_LANE_SLOPE_MIN and m >= LEFT_LANE_SLOPE_MAX:
+#                left_lines.append((m, x1,y1))
+#                cv2.line(img, (x1, y1), (x2, y2), color, thickness)
+#            elif m >= RIGHT_LANE_SLOPE_MIN and m <= RIGHT_LANE_SLOPE_MAX:
+#                right_lines.append((m, x2,y2))
+#                cv2.line(img, (x1, y1), (x2, y2), color, thickness)
+
+    # Find median angle
+    median_x = 0
+    median_y = 0
+    median_angle = 0
+
+    print( "Lines" )
+    for line in sorted(lines_found):
+        print( line )
+
+    if len(lines_found) > 1:
+        median_angle, median_x, median_y = sorted(lines_found)[int(len(lines_found)/2)]
+    left_length = 200
+    l2x = median_x + left_length
+    l2y = median_y + left_length * median_angle
+    line2 = ((int(median_x), int(median_y)), (int(l2x), int(l2y)))
+    print(line2)
+    cv2.line(img, (int(median_x), int(median_y)), (int(l2x), int(l2y)), color, 3)
+
+    return img
+
+
 # -------------- The pipeline --------------
 
-# The full pipeline
-steering_position = 0
+steer = 0
 speed = 0
-def pipeline(image, v):
-    global speed, steering_position
+def pipeline(image):
+    global speed, steer
     global M, Minv
     global warp_on, threshold_on
     
@@ -346,11 +404,62 @@ def pipeline(image, v):
         M = cv2.getPerspectiveTransform(src, dest)
         Minv = cv2.getPerspectiveTransform(dest, src)
 
-    image = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
-    image = cv2.GaussianBlur(image, (7,7), 1.5)
-    image = cv2.Canny(image, 30, 3)
+    # Warp
+    image = warp_image(image)
 
-    return image, image, 0, 0
+    # Save original
+    image_original = image
+
+    # Find Lines Method 1: Blur and Canny. Lots of wiggles.
+#    image = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
+#    gray = cv2.GaussianBlur(gray, (7,7), 1.5)
+#    gray = cv2.Canny(gray, 30, 3)
+#    image = cv2.cvtColor(gray, cv2.COLOR_GRAY2BGR)
+
+    # Find Lines Method 2: Bilateral and Canny. Pretty good.
+#    gray = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
+#    gray = cv2.bilateralFilter(gray, 11, 17, 17)
+#    gray = cv2.Canny(gray, 30, 200)
+#    image = cv2.cvtColor(gray, cv2.COLOR_GRAY2BGR)
+
+    # Find Lines Method 3: Sharpen and Sobel x. Nice.
+#    image = sharpen_image(image)
+#    image = sobel_threshold(image, orient='x', sobel_kernel=3, thresh=(20, 160))
+#    gray = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
+
+    # Find Lines Method 4: Filter blue colour
+    hsv = cv2.cvtColor(image, cv2.COLOR_BGR2HSV)
+    lower_blue = np.array([100, 10, 10])
+    upper_blue = np.array([170, 255, 255])
+    image = cv2.inRange(hsv, lower_blue, upper_blue)
+
+    # Find lines and draw them
+    lines = hough_lines(image, 1, np.pi/180, 20, min_line_len=10, max_line_gap=90)
+    lines_image = np.zeros((image.shape[0], image.shape[1], 3), dtype=np.uint8)
+#    draw_lines(lines_image, lines, [255, 0, 0], 1)
+
+    # Find curved lines
+#    im2, cnts, hi = cv2.findContours(image.copy(), cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE)
+#    cnts = sorted(cnts, key = cv2.contourArea, reverse = True)[:5]
+#    screenCnt = None
+#    for c in cnts: 
+#       peri = cv2.arcLength(c, True)
+#        approx = cv2.approxPolyDP(c, 0.02 * peri, True) 
+#        if len(approx) > 2:
+#            screenCnt = approx
+#            break
+#    for i in range(len(cnts)):
+#        cv2.drawContours(image, cnts, i, (i*10 % 255, i*20 % 155, 200), 2)
+
+    image = cv2.cvtColor(image, cv2.COLOR_GRAY2BGR)
+#    image = cv2.addWeighted(image_original, 0.2, image, 0.8, 0)
+
+#    image_out = cv2.addWeighted(image_original, 0.2, lines_image, 0.8, 0)
+
+#    image = dewarp_image(image)
+
+    return image, lines_image, 0, 0
+
 
     image = sharpen_image(image)
 
