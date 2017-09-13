@@ -65,27 +65,27 @@ def initMotors():
     
     # Try raspberry pi direct PWM output
     if os.uname()[1] == "raspberrypi":
-        print("Started pi motors")
+        print("Starting motors.")
         pi.set_PWM_range(17, 1000)
         pi.set_PWM_range(27, 1000)
         pi.set_PWM_frequency(17, 50)
         pi.set_PWM_frequency(27, 50)
-	
-    try:
-        board = MultiWii("/dev/ttyACM0")
-    except:
+    else:
         try:
-            board = MultiWii("/dev/ttyUSB0")
+            board = MultiWii("/dev/ttyACM0")
         except:
             try:
-                board = MultiWii("/dev/ttyACM1")
+                board = MultiWii("/dev/ttyUSB0")
             except:
                 try:
-                    board = MultiWii("/dev/ttyACM2")
+                    board = MultiWii("/dev/ttyACM1")
                 except:
-                    print("\nNo motor output.")
-                    tries += 1
-                    sys.stdout.flush()
+                    try:
+                        board = MultiWii("/dev/ttyACM2")
+                    except:
+                        print("\nNo motor output.")
+                        tries += 1
+                        sys.stdout.flush()
 
     # Motor enable pin
     try:

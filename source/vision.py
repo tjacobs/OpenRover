@@ -339,7 +339,7 @@ def draw_lines(img, lines, color=[255, 0, 0], thickness=5):
     if lines is None:
 #        cv2.line(img, (int(left_line_x1), int(left_line_y1)), (int(left_line_x2), int(left_line_y2)), [255,255,255], 12) #draw left line
 #        cv2.line(img, (int(right_line_x1), int(right_line_y1)), (int(right_line_x2), int(right_line_y2)), [255,255,255], 12) #draw left line
-        return img, 0
+        return img, 0, 0
     
     # Go through lines, bucket into left lines and right lines based on slope
     for line in lines:
@@ -370,18 +370,22 @@ def draw_lines(img, lines, color=[255, 0, 0], thickness=5):
     #for line in sorted(lines_found):
     #    print( line )
 
+    speed = 0
     if len(lines_found) > 1:
         median_angle, median_x, median_y = sorted(lines_found)[int(len(lines_found)/2)]
+    if len(lines_found) > 3:
+        speed = 1
     median_x = 160
     median_y = 120
     left_length = 100
-    l2x = median_x + left_length * median_angle
-    l2y = median_y + left_length * 1
+    l2x = median_x - left_length * median_angle
+    l2y = median_y - left_length * 1
     line2 = ((int(median_x), int(median_y)), (int(l2x), int(l2y)))
-    cv2.line(img, (int(median_x), int(median_y)), (int(l2x), int(l2y)), [0,255,0], 3)
- 
 
-    return img, median_angle
+    # Draw steering line
+    cv2.line(img, (int(median_x), int(median_y)), (int(l2x), int(l2y)), [0,255,0], 3)
+
+    return img, median_angle, speed
 
 
 # -------------- The pipeline --------------
@@ -401,8 +405,8 @@ def pipeline(image):
         src = np.float32(
            [[image.shape[1] * 0.2, 0], 
             [image.shape[1] * 0.8, 0],
-            [-500,                 image.shape[0]],
-            [500+image.shape[1],   image.shape[0]]])
+            [-200,                 image.shape[0]],
+            [200+image.shape[1],   image.shape[0]]])
         dest = np.float32(
             [[0,              0],
              [image.shape[1], 0],
@@ -445,7 +449,7 @@ def pipeline(image):
     # Find lines and draw them
     lines = hough_lines(cropped_image, 1, np.pi/180, 20, min_line_len=10, max_line_gap=90)
     lines_image = np.zeros((image.shape[0], image.shape[1], 3), dtype=np.uint8)
-    lines_image, steer = draw_lines(lines_image, lines, [0, 0, 255], 1)
+    lines_image, steer, speed = draw_lines(lines_image, lines, [255, 0, 0], 1)
 
     # Find curved lines
 #    image2, contours, hi = cv2.findContours(cropped_image, cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE)
@@ -477,7 +481,7 @@ def pipeline(image):
 
     #image = cv2.addWeighted(image, 0.5, image_original, 0.5, 0)
     image = cv2.addWeighted(image_original, 0.3, lines_image, 0.7, 0)
-    return image, steer, 0
+    return image, steer, speed
 
 
     #frame = cv2.addWeighted(frame, 0.7, vision_frame1, 0.3, 0)
@@ -512,13 +516,10 @@ def pipeline(image):
     # Draw those lines
     lanes_image = draw_lanes(image, left_line_x, centre_line_x, right_line_x, y, steer, speed)
 
-    return warp_image(image_in), image, steer, speed
 
 # Main loop thread
 camera_frame = None
 frame = None
-steer = 0
-speed = 0
 frames_per_second_so_far = 0
 frames_per_second = 0
 time_start = 0
@@ -537,7 +538,7 @@ def vision_function():
             time_start = time.time()
 
         # Don't hog the CPU
-        time.sleep(0.1)
+        time.sleep(0.01)
 
 # Start thread
 print("Starting vision.")

@@ -155,7 +155,6 @@ while not keys or not keys.esc_key_pressed:
         if remote.left:
            steering += 0.9 * dt
 
-    acceleration += 6 * dt
 
     # Slow down
     acceleration *= (1.0 - (0.5 * dt))
@@ -176,7 +175,10 @@ while not keys or not keys.esc_key_pressed:
     frame = vision.frame
     vision_steering = vision.steer
     vision_speed = vision.speed
-    
+   
+    # Go forward if vision says so 
+    if vision_speed > 0: 
+        acceleration += 6 * dt
     #vision_steering = 0
 
     # Pump the throttle for a second every five seconds
@@ -185,11 +187,8 @@ while not keys or not keys.esc_key_pressed:
     if( time.time() - acceleration_time > 1.0 ):
         acceleration_time = time.time()
 
-#    print(vision_steering)
-
     # Output
-#    vision_steering /= 60
-    #steering = min(max((steering + vision_steering), -0.8), 0.8)
+    #steering = min(max((steering + vision_steering/2), -0.8), 0.8)
     steering = min(max(vision_steering, -0.8), 0.8)
     acceleration = min(max(acceleration, 0.0), 0.5)
    
@@ -200,11 +199,8 @@ while not keys or not keys.esc_key_pressed:
     if frame is not None:
         jpg_frame = cv2.imencode(".jpg", frame)[1]
         remote.send_frame(jpg_frame)
-
-    # Pump this frame out so we can see it remotely
-    if video is not None:
-        video.send_frame(frame)
-
+ 
+    # Output motor commands
     if motors is not None:
         if differential:
             # Steer tank style
