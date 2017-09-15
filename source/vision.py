@@ -1,18 +1,15 @@
+import time
+import glob
 import cv2
 import numpy as np
 from PIL import Image   
-import time
-import glob
 from threading import Thread
-
-# Options
-warp_on = True
-threshold_on = True
 
 # Globals
 M = None
 Minv = None
 
+# Timing
 def timing(f):
     def wrap(*args):
         time1 = time.time()
@@ -30,20 +27,6 @@ def sharpen_image(img):
     gb = cv2.GaussianBlur(img, (5,5), 20.0)
     return cv2.addWeighted(img, 2, gb, -1, 0)
 
-# Treshold a channel of HLS
-@timing
-def hls_select(img, threshold, hls_option, invert = 0):
-    # Convert to HLS color space
-    hls = cv2.cvtColor(img, cv2.COLOR_RGB2HLS)
-    
-    # Apply a threshold to the channel
-    s = invert * hls[:, :, hls_option]
-    binary_output = np.zeros_like(img)
-    binary_output[ (s>threshold[0]) & (s<=threshold[1]) ] = 255
-    
-    # Return a binary image of threshold result
-    return binary_output
-
 # Function that thresholds a channel of YUV
 @timing
 def yuv_select(img, threshold, yuv_option, invert = 0):
@@ -58,54 +41,8 @@ def yuv_select(img, threshold, yuv_option, invert = 0):
     # Return a binary image of threshold result
     return binary_output
 
-# Function that applies Sobel x and y, then computes the direction of the gradient and applies a threshold.
-def direction_threshold(img, sobel_kernel=3, thresh=(0, np.pi/2)):
-    # Convert to grayscale
-    gray = cv2.cvtColor( img, cv2.COLOR_RGB2GRAY )
-    
-    # Take the gradient in x and y separately
-    grad_x = cv2.Sobel( gray, cv2.CV_64F, 1, 0, ksize=sobel_kernel )
-    grad_y = cv2.Sobel( gray, cv2.CV_64F, 0, 1, ksize=sobel_kernel )
-    
-    # Take the absolute value of the x and y gradients
-    grad_x_abs = np.absolute( grad_x )
-    grad_y_abs = np.absolute( grad_y )
-    
-    # Use np.arctan2(abs_sobely, abs_sobelx) to calculate the direction of the gradient 
-    direction = np.arctan2( grad_y_abs, grad_x_abs )
-    
-    # Create a binary mask where direction thresholds are met
-    binary_output = np.zeros_like( gray )
-    binary_output[ (direction > thresh[0]) & (direction < thresh[1]) ] = 1
-    
-    # Return this mask binary_output image
-    return binary_output
-
-# Function that applies Sobel x and y, then computes the magnitude of the gradient and applies a threshold
-def magnitude_threshold(img, sobel_kernel=3, mag_thresh=(0, 255)):
-    
-    # Convert to grayscale
-    gray = cv2.cvtColor( img, cv2.COLOR_RGB2GRAY )
-    
-    # Take the gradient in x and y separately
-    x_grad = cv2.Sobel( gray, cv2.CV_64F, 1, 0, ksize=sobel_kernel )
-    y_grad = cv2.Sobel( gray, cv2.CV_64F, 0, 1, ksize=sobel_kernel )
-    
-    # Calculate the magnitude
-    mag = np.sqrt( np.square( x_grad ) + np.square( y_grad ) )
-    
-    # Scale to 8-bit (0 - 255) and convert to type = np.uint8
-    scale_factor = np.max( mag ) / 255
-    scaled = (mag / scale_factor).astype( np.uint8 )
-
-    # Create a binary mask where mag thresholds are met
-    binary_output = np.zeros_like( mag )
-    binary_output[ (scaled > mag_thresh[0]) & (scaled < mag_thresh[1]) ] = 1
-
-    # Return this binary_output image
-    return binary_output
-
 # Function that applies Sobel x or y, then takes an absolute value and applies a threshold.
+@timing
 def sobel_threshold(img, orient='x', sobel_kernel=3, thresh=(0, 255)):
     # Convert to grayscale
     gray = cv2.cvtColor( img, cv2.COLOR_RGB2GRAY )
@@ -128,34 +65,13 @@ def sobel_threshold(img, orient='x', sobel_kernel=3, thresh=(0, 255)):
     colour = cv2.cvtColor(binary_output, cv2.COLOR_GRAY2RGB)
     return colour
 
-# Our mega threshold function
-@timing
-def threshold_image(image, v): # V = settings vector
-
-#    image = hls_select(image, (v[0], v[1]), min(max(v[2], 0), 1), 1)
-
-    image = sobel_threshold(image, orient='x', sobel_kernel=3, thresh=(v[0], v[1]))
-
-    return image
-
-    # Apply each of the thresholding functions
-#    ksize = 3
-#    gradx_binary = sobel_threshold(image, orient='x', sobel_kernel=ksize, thresh=(80, 255))
-#    mag_binary   = magnitude_threshold(image, sobel_kernel=ksize, mag_thresh=(30, 255)) 
-#    dir_binary   = direction_threshold(image, sobel_kernel=ksize, thresh=(0.9, 1.2))
-#    hls_binary   = hls_select(image, (50, 255), 1)
-
-    # Combine them
-#    combined = np.zeros_like(gradx_binary)
-#    combined[ ( ((mag_binary == 1) & (dir_binary == 1)) | (hls_binary == 1) ) ] = 1
-#    return gradx_binary
-
 # Warp
-#@timing
+@timing
 def warp_image(image):
     global M
     return cv2.warpPerspective(image, M, (image.shape[1], image.shape[0]))
 
+@timing
 def dewarp_image(image):
     global Minv
     return cv2.warpPerspective(image, Minv, (image.shape[1], image.shape[0]))
