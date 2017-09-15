@@ -5,7 +5,11 @@ Featuring LaneVision™ Technology.
 
 OpenRover runs on a Raspberry Pi 3, or an ODROID XU4.
 
-It's designed for small scale RC cars. It uses a webcam or Pi Cam and OpenCV to detect lane lines and steer and drive the car.
+It's designed for radio controlled cars.
+
+![](docs/drive.jpg)
+
+It uses a webcam and OpenCV to detect lane lines and drive the car.
 
 [Overview and context of the project](https://medium.com/australian-robotics-society/self-racing-cars-down-under-d6223af4fad0).
 
@@ -55,8 +59,5 @@ To start driving, run this.
 # Driving
 
 OpenRover serves its web interface from the device's IP address. Open a browser to e.g. http://10.0.0.2 and you will be able to manually drive the car with w, a, s, d keys from the page.
-
-OpenRover currently broadcasts its vision-processed video feed to http://meetzippy.com. This will be changed to serve to the locally served webpage in the next version for faster throughput.
-
 
 

@@ -14,15 +14,12 @@ if os.uname()[1] == "odroid":
     differential = True
 
 # Camera capture, vision processing, and video transmission resolution
-resolution = (320, 240)
-#resolution = (640, 480) # Getting about 2 FPS
+resolution = (160, 128)
 video_number = 0
 if os.uname()[1] == "beaglebone":
-    resolution = (320, 240)
     video_number = 0
 elif os.uname()[1] == "odroid":
-    resolution = (320, 240)  # Getting about 8 FPS
-    resolution = (640, 480) # Getting about 2 FPS
+    resolution = (320, 240) 
     video_number = 6
 
 # -----------------------
@@ -61,10 +58,6 @@ try:
     from PIL import Image   
 except:
     print("No Pillow.")
-try:
-    import matplotlib.image as mpimg
-except:
-    pass
 motors = None
 try:
     if os.uname()[1] != "Thomass-Air" and os.uname()[1] != "Thomass-MacBook-Air.local":
@@ -72,11 +65,6 @@ try:
 except:
     print("No motors.")
 video = None
-#try:
-#    import video
-#    video.resolution = resolution
-#except:
-#    print("No video.")
 try:
     import remote
 except:
@@ -119,7 +107,7 @@ if display and os.uname()[1] == "odroid":
     cv2.moveWindow( "preview", 10, 10 )
     cv2.imshow("preview", frame)
 
-# Loop
+# Init
 frames_per_second = 0
 frames_per_second_so_far = 0
 time_start = time.time()
@@ -127,17 +115,20 @@ lastPWM = 0
 vision_steering = 0
 vision_speed = 0
 acceleration_time = 0
-sys.stdout.flush()
-
-v = [20, 170, 2]
 gy_sum = 0
-
-if motors is not None:
-    motors.initMotors()
-print("Running.")
 time_now = 0
 old_time = 0
 dt = 0
+
+# Write log
+sys.stdout.flush()
+
+# Start motors
+if motors is not None:
+    motors.initMotors()
+
+# Loop
+print("Running.")
 while not keys or not keys.esc_key_pressed:
     # Calculate dt   
     time_now = time.time()
@@ -151,14 +142,13 @@ while not keys or not keys.esc_key_pressed:
         if remote.down:
            acceleration -= 5 * dt
         if remote.right:
-           steering -= 0.9 * dt
+           steering -= 2.0 * dt
         if remote.left:
-           steering += 0.9 * dt
-
+           steering += 2.0 * dt
 
     # Slow down
     acceleration *= (1.0 - (0.5 * dt))
-    steering *=     (1.0 - (0.5 * dt))
+    steering *=     (1.0 - (0.3 * dt))
  
     # Get a frame
     newFrame = camera.read()
@@ -170,7 +160,6 @@ while not keys or not keys.esc_key_pressed:
     # Send the frame to vision    
     vision.camera_frame = frame
 
-
     # Read the latest processed frame
     frame = vision.frame
     vision_steering = vision.steer
@@ -178,19 +167,21 @@ while not keys or not keys.esc_key_pressed:
    
     # Go forward if vision says so 
     if vision_speed > 0: 
-        acceleration += 6 * dt
-    #vision_steering = 0
+        acceleration += 10.0 * dt
 
     # Pump the throttle for a second every five seconds
     if( time.time() - acceleration_time > 0.5 ):
-        acceleration *= (1.0 - (40.0 * dt))
+        acceleration *= (1.0 - (50.0 * dt))
     if( time.time() - acceleration_time > 1.0 ):
         acceleration_time = time.time()
 
-    # Output
-    #steering = min(max((steering + vision_steering/2), -0.8), 0.8)
-    steering = min(max(vision_steering, -0.8), 0.8)
-    acceleration = min(max(acceleration, 0.0), 0.5)
+    # Set steering and acceleration
+    if steering > 0.1 or steering < -0.1:
+        steering = steering
+    else:
+        steering = vision_steering/25
+    steering     = min(max((steering), -0.8), 0.8)
+    acceleration = min(max(acceleration, 0.0), 0.4)
    
     # Post process
     frame = process(frame)
@@ -236,7 +227,6 @@ while not keys or not keys.esc_key_pressed:
         frames_per_second = frames_per_second_so_far
         frames_per_second_so_far = 0
         time_start = time.time()
-#    motors.display("FPS: {}".format(frames_per_second))
     
     # Show frame if we have a GUI
     if display and frame is not None:

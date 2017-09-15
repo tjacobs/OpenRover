@@ -289,7 +289,7 @@ def draw_lines(img, lines, color=[255, 0, 0], thickness=5):
     speed = 0
     if len(lines_found) > 1:
         median_angle, median_x, median_y = sorted(lines_found)[int(len(lines_found)/2)]
-    if len(lines_found) > 3:
+    if len(lines_found) > 1:
         speed = 1
     median_x = 160
     median_y = 120
