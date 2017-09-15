@@ -26,6 +26,7 @@ picamera = None
 cap = None
 frame = None
 running = True
+res = (0, 0)
 
 # Read a frame from the camera
 def read():
@@ -48,12 +49,14 @@ def update():
                 frame = rawCapture.array
             else:
                 # Capture frame from regular USB webcam
-                (grabbed, frame) = cap.read()
+                (grabbed, frame2) = cap.read()
+                frame = cv2.resize(frame2, res, interpolation = cv2.INTER_CUBIC)
         print("Stopped camera.")
 
 def startCamera(resolution, cam_number=0):
-        global rawCapture, picamera, cap
-    
+        global rawCapture, picamera, cap, res
+        res = resolution 
+
         # First try Pi camera
         print("Starting camera.")
         try:
@@ -62,7 +65,6 @@ def startCamera(resolution, cam_number=0):
                 rawCapture = PiRGBArray(picamera, size=resolution)
         except:
                 picamera = None
-
                 # Try regular USB webcam
                 try:
                     cap = cv2.VideoCapture(cam_number)
@@ -72,8 +74,8 @@ def startCamera(resolution, cam_number=0):
                     except:
                         print("Error starting camera.")
                         pass 
-                cap.set(3, resolution[0])
-                cap.set(4, resolution[1])
+                #cap.set(3, resolution[0])
+                #cap.set(4, resolution[1])
                 #cap.set(15, 0.1) # Exposure, not usually supported
 
         # Start thread
