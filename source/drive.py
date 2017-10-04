@@ -14,8 +14,8 @@ if os.uname()[1] == "odroid":
     differential = True
 
 # Camera capture, vision processing, and video transmission resolution
-resolution = (160, 120)
-video_number = 1
+resolution = (160, 128)
+video_number = 0
 if os.uname()[1] == "beaglebone":
     video_number = 0
 elif os.uname()[1] == "odroid":
