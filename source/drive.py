@@ -169,14 +169,14 @@ while not keys or not keys.esc_key_pressed:
     steering = vision_steering
 
     # Set acceleration
-    if False:
+    if True:
         if vision_speed > 0: 
             acceleration += 10.0 * vision_speed * dt
 
         # Pump the throttle for a second every five seconds
         if( time.time() - acceleration_time > 0.3 ):
             acceleration *= (1.0 - (50.0 * dt))
-        if( time.time() - acceleration_time > 1.0 ):
+        if( time.time() - acceleration_time > 1.5 ):
             acceleration_time = time.time()
 
     # Cap
