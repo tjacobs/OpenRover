@@ -89,10 +89,10 @@ acceleration = 0.0
 def process(image):
     # Just put text over it
     global frames_per_second, steering, acceleration
-    cv2.putText(image, "OpenRover", (2, 10), cv2.FONT_HERSHEY_SIMPLEX, 0.3, (255, 215, 215), 1)
-    cv2.putText(image, "FPS: {}".format(vision.frames_per_second), (2, 40), cv2.FONT_HERSHEY_SIMPLEX, 0.3, (255, 195, 195), 1)
-    cv2.putText(image, "Steering: {0:.2f}".format(steering), (2, 20), cv2.FONT_HERSHEY_SIMPLEX, 0.3, (255, 195, 195), 1)
-    cv2.putText(image, "Acceleration: {0:.2f}".format(acceleration), (2, 30), cv2.FONT_HERSHEY_SIMPLEX, 0.3, (255, 195, 195), 1)
+    cv2.putText(image, "OpenRover", (55, 8), cv2.FONT_HERSHEY_SIMPLEX, 0.3, (255, 215, 215), 1)
+    cv2.putText(image, "FPS: {}".format(vision.frames_per_second), (2, 120), cv2.FONT_HERSHEY_SIMPLEX, 0.3, (255, 195, 195), 1)
+    cv2.putText(image, "Steer: {0:.2f}".format(steering), (12, 18), cv2.FONT_HERSHEY_SIMPLEX, 0.3, (255, 195, 195), 1)
+    cv2.putText(image, "Accel: {0:.2f}".format(acceleration), (90, 18), cv2.FONT_HERSHEY_SIMPLEX, 0.3, (255, 195, 195), 1)
     #cv2.putText(image, "Controls: w a s d".format(), (10, 40), cv2.FONT_HERSHEY_SIMPLEX, 0.2, (195, 195, 195), 1)
     return image
 
@@ -165,9 +165,12 @@ while not keys or not keys.esc_key_pressed:
     vision_steering = vision.steer
     vision_speed = vision.speed
    
-    # Go forward if vision says so 
-#    if vision_speed > 0: 
-#        acceleration += 10.0 * dt
+    # Set steering
+    steering = vision_steering
+
+    # Set acceleration
+    if vision_speed > 0: 
+        acceleration += 10.0 * vision_speed * dt
 
     # Pump the throttle for a second every five seconds
     if( time.time() - acceleration_time > 0.5 ):
@@ -175,11 +178,7 @@ while not keys or not keys.esc_key_pressed:
     if( time.time() - acceleration_time > 1.0 ):
         acceleration_time = time.time()
 
-    # Set steering and acceleration
-#    if steering > 0.1 or steering < -0.1:
-#        steering = steering
-#    else:
-    steering = vision_steering/1
+    # Cap
     steering     = min(max((steering), -0.8), 0.8)
     acceleration = min(max(acceleration, 0.0), 0.4)
    

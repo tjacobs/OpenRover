@@ -89,7 +89,7 @@ def hough_lines(img, rho, theta, threshold, min_line_len, max_line_gap):
 
 # Smooth track angle and track lateral offset between frames
 smoothed_angle = 0
-smoothed_offset = 0
+smoothed_offset = 160/2
 smoothed_speed = 0
 
 def draw_lines(img, lines, color=[255, 0, 0], thickness=5):
@@ -163,7 +163,8 @@ def draw_lines(img, lines, color=[255, 0, 0], thickness=5):
     cv2.line(img, (int(smoothed_offset), int(88)), (int(smoothed_offset - 60.0 * smoothed_speed * smoothed_angle), int(88-60.0*smoothed_speed)), [100, 200, 100], 2)
 
     # Return drawn on image, angle, and speed factor
-    return img, median_angle, speed
+    steer = (160/2 - smoothed_offset)/80 + smoothed_angle
+    return img, steer, smoothed_speed
 
 
 # -------------- The pipeline --------------
