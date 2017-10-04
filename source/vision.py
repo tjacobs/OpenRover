@@ -170,7 +170,7 @@ def draw_lines(img, lines, color=[255, 0, 0], thickness=5):
     cv2.line(img, (int(smoothed_offset), int(88)), (int(smoothed_offset - 60.0 * smoothed_speed * smoothed_angle), int(88-60.0*smoothed_speed)), [100, 200, 100], 2)
 
     # Return drawn on image, angle, and speed factor
-    steer = (160/2 - smoothed_offset)/100 + smoothed_angle/2
+    steer = (160/2 - smoothed_offset)/200 + smoothed_angle/4
     return img, steer, smoothed_speed
 
 
