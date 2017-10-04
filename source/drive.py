@@ -167,7 +167,7 @@ while not keys or not keys.esc_key_pressed:
    
     # Set steering
     steering = vision_steering
-    acceleration = vision_speed/5
+    acceleration = vision_speed/4
 
     # Set acceleration
 #    if True:
@@ -180,16 +180,23 @@ while not keys or not keys.esc_key_pressed:
 #        if( time.time() - acceleration_time > 1.7 ):
 #            acceleration_time = time.time()
 
-    max_acceleration = 0.3
     min_acceleration = 0.0
-    if( time.time() - acceleration_time > 1 ):
-        min_acceleration = 0.2
-        max_acceleration = 0.4
-    if( time.time() - acceleration_time > 1.7 ):
-        acceleration_time = time.time()
+    max_acceleration = 0.25
+
+    # If cornering
+#    if acceleration < 0.2 and (steering < -0.2 or steering > 0.2):
+    if True:
+        if( time.time() - acceleration_time > 0.1 ):
+           min_acceleration = 0.0
+           max_acceleration = 0.0
+        if( time.time() - acceleration_time > 0.3 ):
+           min_acceleration = 0.25
+           max_acceleration = 0.25
+        if( time.time() - acceleration_time > 0.5 ):
+           acceleration_time = time.time()
 
     # Cap
-    steering     = min(max((steering), -0.8), 0.8)
+    steering     = min(max((steering), -0.9), 0.9)
     acceleration = min(max(acceleration, min_acceleration), max_acceleration)
    
     # Post process
@@ -208,7 +215,7 @@ while not keys or not keys.esc_key_pressed:
             motors.setPWM(2, acceleration - steering)
         else:
             # Steer Ackermann style
-            motors.setPWM(2, steering - 0.45)
+            motors.setPWM(2, steering - 0.5)
 
             # Accelerate
             motors.setPWM(1, acceleration - 1.0)

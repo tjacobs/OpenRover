@@ -100,7 +100,7 @@ def draw_lines(img, lines, color=[255, 0, 0], thickness=5):
         smoothed_speed = 0.6
 
         # Steer extreme one way or another depending on last value
-        steer = (160/2 - smoothed_offset)/80 + smoothed_angle
+        steer = (160/2 - smoothed_offset)/150 + smoothed_angle/3
         if steer > 0: steer = 1
         else:         steer = -1
         return img, steer, smoothed_speed
@@ -170,7 +170,7 @@ def draw_lines(img, lines, color=[255, 0, 0], thickness=5):
     cv2.line(img, (int(smoothed_offset), int(88)), (int(smoothed_offset - 60.0 * smoothed_speed * smoothed_angle), int(88-60.0*smoothed_speed)), [100, 200, 100], 2)
 
     # Return drawn on image, angle, and speed factor
-    steer = (160/2 - smoothed_offset)/200 + smoothed_angle/4
+    steer = (160/2 - smoothed_offset)/150 + smoothed_angle/3
     return img, steer, smoothed_speed
 
 
