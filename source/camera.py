@@ -62,8 +62,8 @@ def startCamera(resolution, cam_number=0):
         try:
                 picamera = PiCamera()
                 picamera.resolution = resolution
-                picamera.contrast = 40
-                picamera.brightness = 60
+                picamera.contrast = 70
+                picamera.brightness = 50
                 rawCapture = PiRGBArray(picamera, size=resolution)
         except:
                 picamera = None

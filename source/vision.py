@@ -97,8 +97,13 @@ def draw_lines(img, lines, color=[255, 0, 0], thickness=5):
     global smoothed_angle, smoothed_offset, smoothed_speed
 
     if lines is None:
-        smoothed_speed = 0.0
-        return img, smoothed_offset, 0
+        smoothed_speed = 0.6
+
+        # Steer extreme one way or another depending on last value
+        steer = (160/2 - smoothed_offset)/80 + smoothed_angle
+        if steer > 0: steer = 1
+        else:         steer = -1
+        return img, steer, smoothed_speed
 
     lines_found = []
 
@@ -119,12 +124,12 @@ def draw_lines(img, lines, color=[255, 0, 0], thickness=5):
             lines_found.append( (m, x1, y1, x2, y2) )
 
     # Found a line? Go forward
-    if len(lines_found) >= 1:
+    if len(lines_found) >= 2:
         if smoothed_speed < 1.0:
             smoothed_speed += 0.01
     else:
-        if smoothed_speed > 0.0:
-            smoothed_speed += 0.01
+        if smoothed_speed > 0.7:
+            smoothed_speed -= 0.01
 
     # Find median angle line
     median_x = 0
@@ -149,15 +154,13 @@ def draw_lines(img, lines, color=[255, 0, 0], thickness=5):
     l2x = start_x - left_length * median_angle
     l2y = start_y - left_length * 1
 
-    # Draw steering line
-#    cv2.line(img, (int(start_x), int(start_y)), (int(l2x), int(l2y)), [0, 200, 0], 2)
-
     # Draw steering line from median x position
-    cv2.line(img, (int(median_x+xoffset), int(median_y+yoffset)), (int(l2x), int(l2y)), [0, 200, 200], 1)
+    if not math.isinf(l2x) and not math.isinf(l2y):
+        cv2.line(img, (int(median_x+xoffset), int(median_y+yoffset)), (int(l2x), int(l2y)), [0, 200, 200], 1)
 
     # Update smoothed offset and angle
-    smoothed_offset += ((median_x+xoffset - smoothed_offset)/10)
-    smoothed_angle += ((median_angle - smoothed_angle)/10)
+    smoothed_offset += ((median_x+xoffset - smoothed_offset)/4)
+    smoothed_angle += ((median_angle - smoothed_angle)/4)
 
     # Draw smoothed steering line
     cv2.line(img, (int(smoothed_offset), int(88)), (int(smoothed_offset - 60.0 * smoothed_speed * smoothed_angle), int(88-60.0*smoothed_speed)), [100, 200, 100], 2)
