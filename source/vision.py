@@ -154,8 +154,12 @@ def draw_lines(img, lines, color=[255, 0, 0], thickness=5):
     l2x = start_x - left_length * median_angle
     l2y = start_y - left_length * 1
 
+    # Check inf
+    if math.isnan(median_angle) or math.isinf(median_angle) or math.isinf(l2x) or math.isinf(l2y):
+        print("INFINITY ERROR *****************************")
+        return img, 0, smoothed_speed
+
     # Draw steering line from median x position
-    if not math.isinf(l2x) and not math.isinf(l2y):
         cv2.line(img, (int(median_x+xoffset), int(median_y+yoffset)), (int(l2x), int(l2y)), [0, 200, 200], 1)
 
     # Update smoothed offset and angle

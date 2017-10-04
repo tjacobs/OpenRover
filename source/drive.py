@@ -147,7 +147,7 @@ while not keys or not keys.esc_key_pressed:
            steering += 2.0 * dt
 
     # Slow down
-    acceleration *= (1.0 - (0.5 * dt))
+    acceleration *= (1.0 - (2.5 * dt))
     steering *=     (1.0 - (0.3 * dt))
  
     # Get a frame
@@ -169,14 +169,15 @@ while not keys or not keys.esc_key_pressed:
     steering = vision_steering
 
     # Set acceleration
-    if vision_speed > 0: 
-        acceleration += 10.0 * vision_speed * dt
+    if False:
+        if vision_speed > 0: 
+            acceleration += 10.0 * vision_speed * dt
 
-    # Pump the throttle for a second every five seconds
-    if( time.time() - acceleration_time > 0.3 ):
-        acceleration *= (1.0 - (50.0 * dt))
-    if( time.time() - acceleration_time > 1.0 ):
-        acceleration_time = time.time()
+        # Pump the throttle for a second every five seconds
+        if( time.time() - acceleration_time > 0.3 ):
+            acceleration *= (1.0 - (50.0 * dt))
+        if( time.time() - acceleration_time > 1.0 ):
+            acceleration_time = time.time()
 
     # Cap
     steering     = min(max((steering), -0.8), 0.8)
@@ -198,7 +199,7 @@ while not keys or not keys.esc_key_pressed:
             motors.setPWM(2, acceleration - steering)
         else:
             # Steer Ackermann style
-            motors.setPWM(2, steering - 0.4)
+            motors.setPWM(2, steering - 0.45)
 
             # Accelerate
             motors.setPWM(1, acceleration - 1.0)
