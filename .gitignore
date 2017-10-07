@@ -23,3 +23,9 @@ log.log
 error.log
 
 videos/
+
+source/cpp/CMakeCache.txt
+
+source/cpp/cmake_install.cmake
+
+source/cpp/CMakeFiles/
