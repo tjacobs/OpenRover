@@ -9,11 +9,19 @@ class Drive {
 public:
   Drive();
 
-  void Update(float throttle, float steering, float dt);
   void Reset();
+  void Update(float throttle, float steering, float dt);
   void UpdateCamera(const uint8_t *frame);
+  
+  void UpdateState(const uint8_t *yuv, size_t yuvlen,
+      float throttle_in, float steering_in,
+      const Eigen::Vector3f &accel,
+      const Eigen::Vector3f &gyro,
+      uint8_t servo_pos,
+      const uint16_t *wheel_encoders, float dt);
+  bool GetControl(float *throttle_out, float *steering_out, float dt);
 
-  KalmanFilter kalman_filter;
+  EKF kalman_filter;
 
   bool _first_frame;
 };
