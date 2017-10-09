@@ -433,38 +433,38 @@ bool Drive::GetControl(float *throttle_out, float *steering_out, float dt) {
 int main(){
 
   // Start it up
-	printf("\nStarting OpenRover.\n");
+  printf("\nStarting OpenRover.\n");
 
   // Start up our car driver
   Drive drive;
 
   // Create window
-  cvNamedWindow("Camera_Output", 1);
+  //cvNamedWindow("Camera_Output", 1);
 
   // Start cam
-  CvCapture* capture = cvCaptureFromCAM(CV_CAP_ANY);
-  cvSetCaptureProperty(capture, CV_CAP_PROP_FRAME_WIDTH, 320);
-  cvSetCaptureProperty(capture, CV_CAP_PROP_FRAME_HEIGHT, 240);
+  //CvCapture* capture = cvCaptureFromCAM(CV_CAP_ANY);
+  //cvSetCaptureProperty(capture, CV_CAP_PROP_FRAME_WIDTH, 320);
+  //cvSetCaptureProperty(capture, CV_CAP_PROP_FRAME_HEIGHT, 240);
 
   while(1){
 
     // Get frame
-    IplImage* frame = cvQueryFrame(capture);
+    //IplImage* frame = cvQueryFrame(capture);
 
     // Show frame
-    cvShowImage("Camera_Output", frame);
-    int frame_length = frame->imageSize;
+    //cvShowImage("Camera_Output", frame);
+    //int frame_length = frame->imageSize;
 
     // Get time
     gettimeofday(&t, NULL);
 
-    uint8_t* f = (unsigned char*)frame->imageData;
+    //uint8_t* f = (unsigned char*)frame->imageData;
 
     // Update our model of the world
     float u_a = throttle_ / 127.0;
     float u_s = steering_ / 127.0;
     float dt = t.tv_sec - _last_t.tv_sec + (t.tv_usec - _last_t.tv_usec) * 1e-6;
-    drive.UpdateState(f, frame_length, u_a, u_s, accel_, gyro_, servo_pos_, wheel_pos_, dt);
+    //drive.UpdateState(f, frame_length, u_a, u_s, accel_, gyro_, servo_pos_, wheel_pos_, dt);
     _last_t = t;
 
     // Get control commands from model
@@ -475,15 +475,15 @@ int main(){
     }
 
     // Wait for that esc
-    key = cvWaitKey(10);
-    if (char(key) == 27){
-        break;
-    }
+    //key = cvWaitKey(10);
+    //if (char(key) == 27){
+    //    break;
+    //}
   }
 
   // We're done
-  cvReleaseCapture(&capture);
-  cvDestroyWindow("Camera_Output");
+  //cvReleaseCapture(&capture);
+  //cvDestroyWindow("Camera_Output");
   return 0;
 }
 
