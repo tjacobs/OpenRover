@@ -3,6 +3,7 @@
 #include <opencv/cv.h>
 #include <opencv/highgui.h>
 #include "drive.h"
+#include "cam.h"
 
 using namespace std;
 using Eigen::Matrix2f;
@@ -430,6 +431,133 @@ bool Drive::GetControl(float *throttle_out, float *steering_out, float dt) {
 }
 
 
+class Driver: public CameraReceiver {
+ public:
+  Driver() {
+    output_fd_ = -1;
+    frame_ = 0;
+    frameskip_ = 0;
+    autosteer_ = false;
+    gettimeofday(&last_t_, NULL);
+  }
+
+  bool StartRecording(const char *fname, int frameskip) {
+    frameskip_ = frameskip;
+    if (!strcmp(fname, "-")) {
+      output_fd_ = fileno(stdout);
+    } else {
+      output_fd_ = open(fname, O_CREAT|O_TRUNC|O_WRONLY, 0666);
+    }
+    if (output_fd_ == -1) {
+      perror(fname);
+      return false;
+    }
+    return true;
+  }
+
+  bool IsRecording() {
+    return output_fd_ != -1;
+  }
+
+  void StopRecording() {
+    if (output_fd_ == -1) {
+      return;
+    }
+    flush_thread_.AddEntry(output_fd_, NULL, -1);
+    output_fd_ = -1;
+  }
+
+  ~Driver() {
+    StopRecording();
+  }
+
+  void OnFrame(uint8_t *buf, size_t length) {
+    struct timeval t;
+    gettimeofday(&t, NULL);
+    frame_++;
+    if (IsRecording() && frame_ > frameskip_) {
+      frame_ = 0;
+      // for now: save U channel below ytop only!
+      static const int ytop = 100;
+      uint32_t flushlen = 55 + (240-ytop) * 320;
+      // copy our frame, push it onto a stack to be flushed
+      // asynchronously to sdcard
+      uint8_t *flushbuf = new uint8_t[flushlen];
+      memcpy(flushbuf, &flushlen, 4);  // write header length
+      memcpy(flushbuf+4, &t.tv_sec, 4);
+      memcpy(flushbuf+8, &t.tv_usec, 4);
+      memcpy(flushbuf+12, &throttle_, 1);
+      memcpy(flushbuf+13, &steering_, 1);
+      memcpy(flushbuf+14, &accel_[0], 4);
+      memcpy(flushbuf+14+4, &accel_[1], 4);
+      memcpy(flushbuf+14+8, &accel_[2], 4);
+      memcpy(flushbuf+26, &gyro_[0], 4);
+      memcpy(flushbuf+26+4, &gyro_[1], 4);
+      memcpy(flushbuf+26+8, &gyro_[2], 4);
+      memcpy(flushbuf+38, &servo_pos_, 1);
+      memcpy(flushbuf+39, wheel_pos_, 2*4);
+      memcpy(flushbuf+47, wheel_dt_, 2*4);
+      memcpy(flushbuf+55, buf + 640*480 + ytop*320, (240-ytop)*320);
+
+      struct timeval t1;
+      gettimeofday(&t1, NULL);
+      float dt = t1.tv_sec - t.tv_sec + (t1.tv_usec - t.tv_usec) * 1e-6;
+      if (dt > 0.1) {
+        fprintf(stderr, "CameraThread::OnFrame: WARNING: "
+            "alloc/copy took %fs\n", dt);
+      }
+
+      flush_thread_.AddEntry(output_fd_, flushbuf, flushlen);
+      struct timeval t2;
+      gettimeofday(&t2, NULL);
+      dt = t2.tv_sec - t1.tv_sec + (t2.tv_usec - t1.tv_usec) * 1e-6;
+      if (dt > 0.1) {
+        fprintf(stderr, "CameraThread::OnFrame: WARNING: "
+            "flush_thread.AddEntry took %fs\n", dt);
+      }
+    }
+
+    {
+      static struct timeval t0 = {0,0};
+      float dt = t.tv_sec - t0.tv_sec + (t.tv_usec - t0.tv_usec) * 1e-6;
+      if (dt > 0.1) {
+        fprintf(stderr, "CameraThread::OnFrame: WARNING: "
+            "%fs gap between frames?!\n", dt);
+      }
+      t0 = t;
+    }
+
+
+    float u_a = throttle_ / 127.0;
+    float u_s = steering_ / 127.0;
+    float dt = t.tv_sec - last_t_.tv_sec + (t.tv_usec - last_t_.tv_usec) * 1e-6;
+    controller_.UpdateState(buf, length,
+            u_a, u_s,
+            accel_, gyro_,
+            servo_pos_, wheel_pos_,
+            dt);
+    last_t_ = t;
+
+    if (autosteer_ && controller_.GetControl(&u_a, &u_s, dt)) {
+      steering_ = 127 * u_s;
+      throttle_ = 127 * u_a;
+      teensy.SetControls(frame_ & 4 ? 1 : 0, throttle_, steering_);
+      // pca.SetPWM(PWMCHAN_STEERING, steering_);
+      // pca.SetPWM(PWMCHAN_ESC, throttle_);
+    }
+  }
+
+  bool autosteer_;
+  DriveController controller_;
+  int frame_;
+
+ private:
+  int output_fd_;
+  int frameskip_;
+  struct timeval last_t_;
+};
+
+
 int main(){
 
   // Start it up
@@ -445,6 +573,16 @@ int main(){
   //CvCapture* capture = cvCaptureFromCAM(CV_CAP_ANY);
   //cvSetCaptureProperty(capture, CV_CAP_PROP_FRAME_WIDTH, 320);
   //cvSetCaptureProperty(capture, CV_CAP_PROP_FRAME_HEIGHT, 240);
+
+  int fps = 30;
+
+  if (!Camera::Init(640, 480, fps))
+    return 1;
+
+  Driver driver;
+  if (!Camera::StartRecord(&driver)) {
+    return 1;
+  }
 
   while(1){
 
@@ -473,6 +611,9 @@ int main(){
       throttle_ = 127 * u_a;
       printf("Throttle: %d, Steering: %d\n", throttle_, steering_);
     }
+
+    usleep(1000);
+
 
     // Wait for that esc
     //key = cvWaitKey(10);
