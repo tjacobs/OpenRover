@@ -577,7 +577,7 @@ class Driver: public CameraReceiver {
     if (output_fd_ == -1) {
       return;
     }
-    //flush_thread_.AddEntry(output_fd_, NULL, -1);
+    flush_thread_.AddEntry(output_fd_, NULL, -1);
     output_fd_ = -1;
   }
 
@@ -614,6 +614,7 @@ class Driver: public CameraReceiver {
       //memcpy(flushbuf+47, wheel_dt_, 2*4);
       memcpy(flushbuf+55, buf + 640*480 + ytop*320, (240-ytop)*320);
 
+      // Check timing
       struct timeval t1;
       gettimeofday(&t1, NULL);
       float dt = t1.tv_sec - t.tv_sec + (t1.tv_usec - t.tv_usec) * 1e-6;
@@ -622,27 +623,27 @@ class Driver: public CameraReceiver {
             "alloc/copy took %fs\n", dt);
       }
 
-      //flush_thread_.AddEntry(output_fd_, flushbuf, flushlen);
+      // Flush
+      flush_thread_.AddEntry(output_fd_, flushbuf, flushlen);
       struct timeval t2;
       gettimeofday(&t2, NULL);
       dt = t2.tv_sec - t1.tv_sec + (t2.tv_usec - t1.tv_usec) * 1e-6;
       if (dt > 0.1) {
-        fprintf(stderr, "CameraThread::OnFrame: WARNING: "
-            "flush_thread.AddEntry took %fs\n", dt);
+        fprintf(stderr, "CameraThread::OnFrame: WARNING: flush_thread.AddEntry took %fs\n", dt);
       }
     }
 
     {
-      static struct timeval t0 = {0,0};
-      float dt = t.tv_sec - t0.tv_sec + (t.tv_usec - t0.tv_usec) * 1e-6;
-      if (dt > 0.2) {
-        fprintf(stderr, "CameraThread::OnFrame: WARNING: "
-            "%fs gap between frames?!\n", dt);
-      }
-      t0 = t;
+    // Check timing
+    static struct timeval t0 = {0, 0};
+    float dt = t.tv_sec - t0.tv_sec + (t.tv_usec - t0.tv_usec) * 1e-6;
+    if (dt > 0.2 && t0.tv_usec != 0) {
+      fprintf(stderr, "CameraThread::OnFrame: WARNING: %fs gap between frames?!\n", dt);
+    }
+    t0 = t;
     }
 
-
+    // Update Kalman Filter
     float u_a = throttle_ / 127.0;
     float u_s = steering_ / 127.0;
     float dt = t.tv_sec - last_t_.tv_sec + (t.tv_usec - last_t_.tv_usec) * 1e-6;
@@ -653,6 +654,7 @@ class Driver: public CameraReceiver {
             dt);
     last_t_ = t;
 
+    // Output actuations
     if (autosteer_ && controller_.GetControl(&u_a, &u_s, dt)) {
       steering_ = 127 * u_s;
       throttle_ = 127 * u_a;
@@ -689,6 +691,10 @@ int main(){
   //cvSetCaptureProperty(capture, CV_CAP_PROP_FRAME_WIDTH, 320);
   //cvSetCaptureProperty(capture, CV_CAP_PROP_FRAME_HEIGHT, 240);
 
+  if (!flush_thread_.Init()) {
+    return 1;
+  }
+
   int fps = 30;
 
   if (!Camera::Init(640, 480, fps))
@@ -712,33 +718,14 @@ int main(){
     }
   }
   
-  while(1){
+  cout << "Starting.\n" << endl;
+  for( int i = 0; i < 30 * 10 * 10; i++) {
 
     // Get frame
     //IplImage* frame = cvQueryFrame(capture);
 
     // Show frame
     //cvShowImage("Camera_Output", frame);
-    //int frame_length = frame->imageSize;
-
-    // Get time
-    gettimeofday(&t, NULL);
-
-    //uint8_t* f = (unsigned char*)frame->imageData;
-
-    // Update our model of the world
-    float u_a = throttle_ / 127.0;
-    float u_s = steering_ / 127.0;
-    float dt = t.tv_sec - _last_t.tv_sec + (t.tv_usec - _last_t.tv_usec) * 1e-6;
-    //drive.UpdateState(f, frame_length, u_a, u_s, accel_, gyro_, servo_pos_, wheel_pos_, dt);
-    _last_t = t;
-
-    // Get control commands from model
-    if(drive.GetControl(&u_a, &u_s, dt)) {
-      steering_ = 127 * u_s;
-      throttle_ = 127 * u_a;
-      //printf("Throttle: %d, Steering: %d\n", throttle_, steering_);
-    }
 
     usleep(1000);
 
@@ -748,6 +735,11 @@ int main(){
     //    break;
     //}
   }
+
+  printf( "Stopping.\n" );    
+  driver.StopRecording();
+  usleep(2 * 1000 * 1000);
+  printf( "Done.\n" );    
 
   // We're done
   //cvReleaseCapture(&capture);
