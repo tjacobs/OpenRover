@@ -1,8 +1,6 @@
 #include <iostream>
 #include <sys/time.h>
-
 #include <fcntl.h>
-
 #include <opencv/cv.h>
 #include <opencv/highgui.h>
 #include "drive.h"
@@ -587,6 +585,19 @@ int main(){
     return 1;
   }
 
+  // Recording
+  int frameskip = 4;
+  int recording_num = 0;
+  struct timeval tv;
+  gettimeofday(&tv, NULL);
+  if (!driver.IsRecording()) {
+    char fnamebuf[256];
+    snprintf(fnamebuf, sizeof(fnamebuf), "%s-%d.yuv", "Recording", recording_num++);
+    if (driver.StartRecording(fnamebuf, frameskip)) {
+      fprintf(stdout, "%d.%06d started recording %s %d/%d fps\n", tv.tv_sec, tv.tv_usec, fnamebuf, fps, frameskip+1);
+    }
+  }
+  
   while(1){
 
     // Get frame
@@ -616,7 +627,6 @@ int main(){
     }
 
     usleep(1000);
-
 
     // Wait for that esc
     //key = cvWaitKey(10);
