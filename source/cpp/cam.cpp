@@ -117,7 +117,7 @@ bool Camera::Init(int width, int height, int fps) {
     fprintf(stderr, "Camera: Cannot enable camera\n");
     return false;
   }
-  fprintf(stderr, "Camera: Video port %s: %d buffers x %d bytes\n", video_port->name, video_port->buffer_num, video_port->buffer_size);
+  //fprintf(stderr, "Camera: Video port %s: %d buffers x %d bytes\n", video_port->name, video_port->buffer_num, video_port->buffer_size);
 
   // Create pool of buffer headers for the output port to consume
   camera_pool_ = mmal_port_pool_create(video_port, video_port->buffer_num, video_port->buffer_size);

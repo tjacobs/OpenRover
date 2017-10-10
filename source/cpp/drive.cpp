@@ -1,6 +1,7 @@
 #include <iostream>
 #include <sys/time.h>
 #include <fcntl.h>
+#include <semaphore.h>
 #include <opencv/cv.h>
 #include <opencv/highgui.h>
 #include "drive.h"
@@ -427,18 +428,18 @@ void Drive::UpdateState(const uint8_t *yuv, size_t yuvlen,
   }
 
   kalman_filter.Predict(dt, throttle_in, steering_in);
-  std::cout << "x after predict " << x_.transpose() << std::endl;
+  //std::cout << "x after predict " << x_.transpose() << std::endl;
 
   if (yuvlen == 640*480 + 320*240*2) {
     UpdateCamera(yuv);
-    std::cout << "x after camera " << x_.transpose() << std::endl;
+    //std::cout << "x after camera " << x_.transpose() << std::endl;
   } else {
     fprintf(stderr, "Drive::UpdateState: invalid yuvlen %ld, expected %d\n",
         yuvlen, 320*240*2);
   }
 
   kalman_filter.UpdateIMU(gyro[2]);
-  std::cout << "x after IMU (" << gyro[2] << ")" << x_.transpose() << std::endl;
+  //std::cout << "x after IMU (" << gyro[2] << ")" << x_.transpose() << std::endl;
 
   // Force psi_e to be forward facing
   if (x_[3] > M_PI/2) {
@@ -453,10 +454,10 @@ void Drive::UpdateState(const uint8_t *yuv, size_t yuvlen,
   // but we could use all four to get turning radius, etc.
   // since the encoders are just 16-bit counters which wrap frequently, we only
   // track the difference in counts between updates.
-  printf("encoders were: %05d %05d %05d %05d\n"
-         "      are now: %05d %05d %05d %05d\n",
-      last_encoders_[0], last_encoders_[1], last_encoders_[2], last_encoders_[3],
-      wheel_encoders[0], wheel_encoders[1], wheel_encoders[2], wheel_encoders[3]);
+  //printf("encoders were: %05d %05d %05d %05d\n"
+  //       "      are now: %05d %05d %05d %05d\n",
+  //    last_encoders_[0], last_encoders_[1], last_encoders_[2], last_encoders_[3],
+  //    wheel_encoders[0], wheel_encoders[1], wheel_encoders[2], wheel_encoders[3]);
 
   // average ds among wheel encoders which are actually moving
   float ds = 0, nds = 0;
@@ -471,13 +472,13 @@ void Drive::UpdateState(const uint8_t *yuv, size_t yuvlen,
   // and do an kalman_filter update if the wheels are moving.
   if (nds > 0) {
     kalman_filter.UpdateEncoders(ds/(nds * dt), servo_pos);
-    std::cout << "x after encoders (" << ds/dt << ") " << x_.transpose() << std::endl;
+    //std::cout << "x after encoders (" << ds/dt << ") " << x_.transpose() << std::endl;
   } else {
     kalman_filter.UpdateEncoders(0, servo_pos);
-    std::cout << "x after encoders (" << ds/dt << ") " << x_.transpose() << std::endl;
+    //std::cout << "x after encoders (" << ds/dt << ") " << x_.transpose() << std::endl;
   }
 
-  std::cout << "P " << kalman_filter.GetCovariance().diagonal().transpose() << std::endl;
+  //std::cout << "P " << kalman_filter.GetCovariance().diagonal().transpose() << std::endl;
 }
 
 static float MotorControl(float accel, float k1, float k2, float k3, float k4, float v) {
@@ -539,7 +540,7 @@ bool Drive::GetControl(float *throttle_out, float *steering_out, float dt) {
 //  printf("steer_target %f delta %f v_target %f v %f a_target %f lateral_a %f/%f v %f y %f psi %f\n",
 //      k_target, delta, v_target, v, a_target, v*v*delta, TRACTION_LIMIT, v, y_e, psi_e);
 
-  printf("Throttle: %f, Steering: %f\n", *throttle_out, *steering_out);
+  //printf("Throttle: %f, Steering: %f\n", *throttle_out, *steering_out);
   return true;
 }
 
@@ -634,7 +635,7 @@ class Driver: public CameraReceiver {
     {
       static struct timeval t0 = {0,0};
       float dt = t.tv_sec - t0.tv_sec + (t.tv_usec - t0.tv_usec) * 1e-6;
-      if (dt > 0.1) {
+      if (dt > 0.2) {
         fprintf(stderr, "CameraThread::OnFrame: WARNING: "
             "%fs gap between frames?!\n", dt);
       }
@@ -707,7 +708,7 @@ int main(){
     char fnamebuf[256];
     snprintf(fnamebuf, sizeof(fnamebuf), "%s-%d.yuv", "Recording", recording_num++);
     if (driver.StartRecording(fnamebuf, frameskip)) {
-      fprintf(stdout, "%d.%06d started recording %s %d/%d fps\n", tv.tv_sec, tv.tv_usec, fnamebuf, fps, frameskip+1);
+      fprintf(stdout, "Started recording to %s at %d/%d FPS.\n", fnamebuf, fps, frameskip+1);
     }
   }
   
@@ -736,7 +737,7 @@ int main(){
     if(drive.GetControl(&u_a, &u_s, dt)) {
       steering_ = 127 * u_s;
       throttle_ = 127 * u_a;
-      printf("Throttle: %d, Steering: %d\n", throttle_, steering_);
+      //printf("Throttle: %d, Steering: %d\n", throttle_, steering_);
     }
 
     usleep(1000);
