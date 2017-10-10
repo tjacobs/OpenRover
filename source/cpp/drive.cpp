@@ -92,18 +92,109 @@ static inline float clip(float x, float min, float max) {
 
 
 
+// Asynchronously flush files to disk
+struct FlushEntry {
+  int fd_;
+  uint8_t *buf_;
+  size_t len_;
+
+  FlushEntry() { buf_ = NULL; }
+  FlushEntry(int fd, uint8_t *buf, size_t len):
+    fd_(fd), buf_(buf), len_(len) {}
+
+  void flush() {
+    if (len_ == -1) {
+      fprintf(stderr, "FlushThread: closing fd %d\n", fd_);
+      close(fd_);
+    }
+    if (buf_ != NULL) {
+      if (write(fd_, buf_, len_) != len_) {
+        perror("FlushThread write");
+      }
+      delete[] buf_;
+      buf_ = NULL;
+    }
+  }
+};
+
+class FlushThread {
+ public:
+  FlushThread() {
+    pthread_mutex_init(&mutex_, NULL);
+    sem_init(&sem_, 0, 0);
+  }
+
+  ~FlushThread() {
+  }
+
+  bool Init() {
+    if (pthread_create(&thread_, NULL, thread_entry, this) != 0) {
+      perror("FlushThread: pthread_create");
+      return false;
+    }
+    return true;
+  }
+
+  void AddEntry(int fd, uint8_t *buf, size_t len) {
+    static int count = 0;
+    pthread_mutex_lock(&mutex_);
+    flush_queue_.push_back(FlushEntry(fd, buf, len));
+    size_t siz = flush_queue_.size();
+    pthread_mutex_unlock(&mutex_);
+    sem_post(&sem_);
+    count++;
+    if (count >= 15) {
+      if (siz > 2) {
+        fprintf(stderr, "[FlushThread %d]\r", siz);
+        fflush(stderr);
+      }
+      count = 0;
+    }
+  }
+
+ private:
+  static void* thread_entry(void* arg) {
+
+    FlushThread *self = reinterpret_cast<FlushThread*>(arg);
+    fprintf(stderr, "FlushThread: started\n");
+    for (;;) {
+      sem_wait(&self->sem_);
+      pthread_mutex_lock(&self->mutex_);
+      if (!self->flush_queue_.empty()) {
+        FlushEntry e = self->flush_queue_.front();
+        self->flush_queue_.pop_front();
+        pthread_mutex_unlock(&self->mutex_);
+        e.flush();
+      } else {
+        pthread_mutex_unlock(&self->mutex_);
+      }
+    }
+  }
+
+  std::deque<FlushEntry> flush_queue_;
+  pthread_mutex_t mutex_;
+  pthread_t thread_;
+  sem_t sem_;
+};
+
+FlushThread flush_thread_;
+
+// At what y value down the image do we start looking?
 static const int ytop = 100;
-// uxrange (-56, 55) uyrange (2, 59) x0 -56 y0 2
+
+// The uxrange is (-56, 55) the uyrange is (2, 59), so x0=-56 and y0-2
 static const int ux0 = -56, uy0 = 2;
 
-// 30 for home, 15 for diyrobocars shiny track
+// Threshold for the difference between track lane and ground U value. Reduce to 15 for shiny floors.
 static const int ACTIV_THRESH = 30;
 
+// U size, width and height
 static const int uxsiz = 111, uysiz = 57;
 
+// How wide is one pixel in the real world?
 static const float pixel_scale_m = 0.025;
 
-// (57, 111), (3197, 2)
+// Bucketcount has resolution: (57, 111), (3197, 2)
 static const uint16_t bucketcount[uxsiz * uysiz] = {
 #include "bucketcount.txt"
 };
@@ -162,8 +253,8 @@ bool TophatFilter(const uint8_t *yuv, Vector3f *Bout, float *y_cout, Matrix4f *R
     }
   }
 
+  // Take an average
   size_t uidx = 0;
-  // average
   for (int j = 0; j < uysiz; j++) {
     for (int i = 0; i < uxsiz; uidx++, i++) {
       if (bucketcount[uidx] > 0) {
@@ -171,13 +262,15 @@ bool TophatFilter(const uint8_t *yuv, Vector3f *Bout, float *y_cout, Matrix4f *R
         accumbuf[uidx*3 + 1] /= bucketcount[uidx];
         accumbuf[uidx*3 + 2] /= bucketcount[uidx];
       }
+
+      // Add to snapshot
       if (fp) {
         fwrite(&accumbuf[uidx*3], 4, 3, fp);
       }
     }
   }
 
-  // flood-fill
+  // Flood fill
   uidx = 0;
   for (int j = 0; j < uysiz; j++) {
     for (int i = 0; i < uxsiz; uidx++, i++) {
@@ -186,13 +279,15 @@ bool TophatFilter(const uint8_t *yuv, Vector3f *Bout, float *y_cout, Matrix4f *R
         accumbuf[uidx*3 + 1] = accumbuf[floodmap[uidx]*3 + 1];
         accumbuf[uidx*3 + 2] = accumbuf[floodmap[uidx]*3 + 2];
       }
+
+      // Add to snapshot
       if (fp) {
         fwrite(&accumbuf[uidx*3], 4, 3, fp);
       }
     }
   }
 
-  // horizontal cumsum
+  // Take horizontal cumulative sum
   for (int j = 0; j < uysiz; j++) {
     for (int i = 1; i < uxsiz; i++) {
       accumbuf[3*(j*uxsiz + i)] += accumbuf[3*(j*uxsiz + i - 1)];
@@ -201,14 +296,14 @@ bool TophatFilter(const uint8_t *yuv, Vector3f *Bout, float *y_cout, Matrix4f *R
     }
   }
 
-  // horizontal convolution w/ [-1, -1, 2, 2, -1, -1]
+  // Take horizontal convolution with tophat kernel (it looks like a tophat): [-1, -1, 2, 2, -1, -1]
+  // And add linear regression points XTX, Xty, yTy, N.
   Matrix3f regXTX = Matrix3f::Zero();
   Vector3f regXTy = Vector3f::Zero();
   double regyTy = 0;
   double regxsum = 0;
   double regwsum = 0;
   int regN = 0;
-
   for (int j = 0; j < uysiz; j++) {
     for (int i = 0; i < uxsiz-7; i++) {
       int32_t yd =
@@ -221,19 +316,23 @@ bool TophatFilter(const uint8_t *yuv, Vector3f *Bout, float *y_cout, Matrix4f *R
         -(accumbuf[3*(j*uxsiz + i + 6) + 2] - accumbuf[3*(j*uxsiz + i) + 2])
         + 3*(accumbuf[3*(j*uxsiz + i + 4) + 2] - accumbuf[3*(j*uxsiz + i + 2) + 2]);
 
-      // detected = (0.25*hv[:, :, 0] - 2*hv[:, :, 1] + 0.5*hv[:, :, 2] - 30)
-      //int32_t detected = (yd >> 2) - (ud << 1) + (vd >> 1) - 60;
-      int32_t detected = -ud - ACTIV_THRESH;
+      // Add to snapshot
       if (fp) {
         fwrite(&yd, 4, 1, fp);
         fwrite(&ud, 4, 1, fp);
         fwrite(&vd, 4, 1, fp);
       }
+
+      // Calculate detected
+      int32_t detected = -ud - ACTIV_THRESH;
       if (detected > 0) {
-        // add x, y to linear regression
+
+        // Add x, y to linear regression
         float pu = pixel_scale_m * (i + ux0 + 3),
               pv = pixel_scale_m * (j + uy0);
-        float w = detected;  // use activation as regression weight
+
+        // Use activation as regression weight
+        float w = detected;
         Vector3f regX(w*pv*pv, w*pv, w);
         regxsum += w*pv;
         regwsum += w;
@@ -244,18 +343,22 @@ bool TophatFilter(const uint8_t *yuv, Vector3f *Bout, float *y_cout, Matrix4f *R
       }
     }
   }
+
+  // Close snapshot
   if (fp) {
     fclose(fp);
     fp = NULL;
   }
 
-  std::cout << "activations " << regN << "\n";
+  // Print
+  std::cout << "Number of activations: " << regN << "\n";
 
-  // not enough data, don't even try to do an update
+  // If not enough data, don't even try to do an update
   if (regN < 8) {
     return false;
   }
 
+  // Linear fit B = XTX.inverse * XTy
   Matrix3f XTXinv = regXTX.inverse();
   Vector3f B = XTXinv * regXTy;
   *Bout = B;
@@ -265,23 +368,28 @@ bool TophatFilter(const uint8_t *yuv, Vector3f *Bout, float *y_cout, Matrix4f *R
   float r2 = B.dot(regXTX * B) - 2*B.dot(regXTy) + regyTy;
   r2 *= 100.0 / (regN - 1);
 
+  // Save y_c
   *y_cout = regxsum / regwsum;
+
 #if 0
   std::cout << "XTX\n" << regXTX << "\n";
   std::cout << "XTy " << regXTy.transpose() << "\n";
   std::cout << "yTy " << regyTy << "\n";
   std::cout << "XTXinv\n" << XTXinv << "\n";
 #endif
+
 #if 1
-  std::cout << "B " << B.transpose() << "\n";
-  std::cout << "r2 " << r2 << "\n";
-  std::cout << "y_c " << *y_cout << "\n";
+  cout << "B " << B.transpose() << "\n";
+  cout << "r2 " << r2 << "\n";
+  cout << "y_c " << *y_cout << "\n";
 #endif
 
+  // All good?
   if (isnan(r2)) {
     return false;
   }
 
+  // What is our covariance?
   (*Rkout).topLeftCorner(3, 3) = XTXinv * r2;
   (*Rkout)(3, 3) = regXTX(1, 1) / regwsum - *y_cout;
   return true;
