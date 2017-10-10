@@ -15,9 +15,15 @@ It uses a webcam and OpenCV to detect lane lines and drive the car.
 
 [How to build your own](https://medium.com/australian-robotics-society/build-your-own-self-racing-car-4204b30dc4d0).
 
-[Example of it running](https://www.instagram.com/p/BXrkQCCB8Qa/?taken-by=australianroboticssociety).
+# In Action
 
-[Example of it driving](https://www.instagram.com/p/BX2N8v0BVw8/?taken-by=australianroboticssociety).
+[First laps on a course](https://www.youtube.com/watch?v=114LnvbvpC8)
+
+[Lap on a workshop course](https://www.youtube.com/watch?v=SkYWpN0lHF0)
+
+[First random steps](https://www.instagram.com/p/BXrkQCCB8Qa/?taken-by=australianroboticssociety).
+
+[Driving manually, and crashing](https://www.instagram.com/p/BX2N8v0BVw8/?taken-by=australianroboticssociety).
 
 # LaneVision™
 LaneVision™ is the system for determining where the lanes of the track are in the camera image, fitting polynomials to them, determining confidence factor with which the lanes have been found, and mapping them into world space.
