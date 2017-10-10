@@ -1,5 +1,8 @@
 #include <iostream>
 #include <sys/time.h>
+
+#include <fcntl.h>
+
 #include <opencv/cv.h>
 #include <opencv/highgui.h>
 #include "drive.h"
@@ -320,7 +323,7 @@ void Drive::UpdateState(const uint8_t *yuv, size_t yuvlen,
     UpdateCamera(yuv);
     std::cout << "x after camera " << x_.transpose() << std::endl;
   } else {
-    fprintf(stderr, "DriveController::UpdateState: invalid yuvlen %ld, expected %d\n",
+    fprintf(stderr, "Drive::UpdateState: invalid yuvlen %ld, expected %d\n",
         yuvlen, 320*240*2);
   }
 
@@ -463,7 +466,7 @@ class Driver: public CameraReceiver {
     if (output_fd_ == -1) {
       return;
     }
-    flush_thread_.AddEntry(output_fd_, NULL, -1);
+    //flush_thread_.AddEntry(output_fd_, NULL, -1);
     output_fd_ = -1;
   }
 
@@ -496,7 +499,7 @@ class Driver: public CameraReceiver {
       memcpy(flushbuf+26+8, &gyro_[2], 4);
       memcpy(flushbuf+38, &servo_pos_, 1);
       memcpy(flushbuf+39, wheel_pos_, 2*4);
-      memcpy(flushbuf+47, wheel_dt_, 2*4);
+      //memcpy(flushbuf+47, wheel_dt_, 2*4);
       memcpy(flushbuf+55, buf + 640*480 + ytop*320, (240-ytop)*320);
 
       struct timeval t1;
@@ -507,7 +510,7 @@ class Driver: public CameraReceiver {
             "alloc/copy took %fs\n", dt);
       }
 
-      flush_thread_.AddEntry(output_fd_, flushbuf, flushlen);
+      //flush_thread_.AddEntry(output_fd_, flushbuf, flushlen);
       struct timeval t2;
       gettimeofday(&t2, NULL);
       dt = t2.tv_sec - t1.tv_sec + (t2.tv_usec - t1.tv_usec) * 1e-6;
@@ -541,14 +544,14 @@ class Driver: public CameraReceiver {
     if (autosteer_ && controller_.GetControl(&u_a, &u_s, dt)) {
       steering_ = 127 * u_s;
       throttle_ = 127 * u_a;
-      teensy.SetControls(frame_ & 4 ? 1 : 0, throttle_, steering_);
+      //teensy.SetControls(frame_ & 4 ? 1 : 0, throttle_, steering_);
       // pca.SetPWM(PWMCHAN_STEERING, steering_);
       // pca.SetPWM(PWMCHAN_ESC, throttle_);
     }
   }
 
   bool autosteer_;
-  DriveController controller_;
+  Drive controller_;
   int frame_;
 
  private:
