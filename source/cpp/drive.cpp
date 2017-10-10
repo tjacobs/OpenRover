@@ -120,20 +120,21 @@ static const int8_t udplane[320*(240-ytop)*2] = {
 #include "udplane.txt"
 };
 
-bool TophatFilter(const uint8_t *yuv, Vector3f *Bout,
-    float *y_cout, Matrix4f *Rkout) {
+bool TophatFilter(const uint8_t *yuv, Vector3f *Bout, float *y_cout, Matrix4f *Rkout) {
+
+  // Input is a 640x480 YUV420 image, create buffer
   int32_t accumbuf[uxsiz * uysiz * 3];
-  // input is a 640x480 YUV420 image
   memset(accumbuf, 0, uxsiz * uysiz * 3 * sizeof(accumbuf[0]));
 
+  // Snapshot at 40 frames in to give the camera time to adjust light
   static int snapshot = 0;
-
-  FILE *fp = NULL;
   snapshot++;
+  FILE *fp = NULL;
   if (snapshot == 40) {
     fp = fopen("snapshot.bin", "w");
   }
-  // for each yuv, (maybe) remap into detected
+
+  // For each yuv, remap into detected
   size_t bufidx = ytop*320;
   size_t udidx = 0;
   for (int j = 0; j < 240 - ytop; j++) {
@@ -142,16 +143,19 @@ bool TophatFilter(const uint8_t *yuv, Vector3f *Bout,
       uint8_t u = yuv[640*480 + bufidx];
       uint8_t v = yuv[640*480 + 320*240 + bufidx];
 
+      // Snapshot YUV values for this pixel
       if (fp) {
         fwrite(&y, 1, 1, fp);
         fwrite(&u, 1, 1, fp);
         fwrite(&v, 1, 1, fp);
       }
 
+      // What is ud mask?  Skip this pixel if the ud mask says so
       if (!udmask[udidx]) continue;
+
+      // Write at dx dy into our buffer 
       int dx = udplane[udidx*2] - ux0;
       int dy = udplane[udidx*2 + 1] - uy0;
-
       accumbuf[(uxsiz * dy + dx) * 3] += y;
       accumbuf[(uxsiz * dy + dx) * 3 + 1] += u;
       accumbuf[(uxsiz * dy + dx) * 3 + 2] += v;
@@ -424,8 +428,8 @@ bool Drive::GetControl(float *throttle_out, float *steering_out, float dt) {
   }
   *throttle_out = clip(MotorControl(a_target, k1, k2, k3, k4, v), -1, MAX_THROTTLE);
 
-  printf("steer_target %f delta %f v_target %f v %f a_target %f lateral_a %f/%f v %f y %f psi %f\n",
-      k_target, delta, v_target, v, a_target, v*v*delta, TRACTION_LIMIT, v, y_e, psi_e);
+//  printf("steer_target %f delta %f v_target %f v %f a_target %f lateral_a %f/%f v %f y %f psi %f\n",
+//      k_target, delta, v_target, v, a_target, v*v*delta, TRACTION_LIMIT, v, y_e, psi_e);
 
   printf("Throttle: %f, Steering: %f\n", *throttle_out, *steering_out);
   return true;
@@ -478,11 +482,12 @@ class Driver: public CameraReceiver {
     frame_++;
     if (IsRecording() && frame_ > frameskip_) {
       frame_ = 0;
-      // for now: save U channel below ytop only!
+
+      // Save U channel below ytop only
       static const int ytop = 100;
+      
+      // Copy our frame, push it onto a stack to be flushed
       uint32_t flushlen = 55 + (240-ytop) * 320;
-      // copy our frame, push it onto a stack to be flushed
-      // asynchronously to sdcard
       uint8_t *flushbuf = new uint8_t[flushlen];
       memcpy(flushbuf, &flushlen, 4);  // write header length
       memcpy(flushbuf+4, &t.tv_sec, 4);
