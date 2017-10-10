@@ -2,6 +2,7 @@
 #include <sys/time.h>
 #include <fcntl.h>
 #include <semaphore.h>
+#include <pigpiod_if2.h>
 #include <opencv/cv.h>
 #include <opencv/highgui.h>
 #include "drive.h"
@@ -619,8 +620,7 @@ class Driver: public CameraReceiver {
       gettimeofday(&t1, NULL);
       float dt = t1.tv_sec - t.tv_sec + (t1.tv_usec - t.tv_usec) * 1e-6;
       if (dt > 0.1) {
-        fprintf(stderr, "CameraThread::OnFrame: WARNING: "
-            "alloc/copy took %fs\n", dt);
+        fprintf(stderr, "CameraThread::OnFrame: WARNING: alloc/copy took %fs\n", dt);
       }
 
       // Flush
@@ -690,7 +690,7 @@ int main(){
   //CvCapture* capture = cvCaptureFromCAM(CV_CAP_ANY);
   //cvSetCaptureProperty(capture, CV_CAP_PROP_FRAME_WIDTH, 320);
   //cvSetCaptureProperty(capture, CV_CAP_PROP_FRAME_HEIGHT, 240);
-
+/*
   if (!flush_thread_.Init()) {
     return 1;
   }
@@ -717,7 +717,47 @@ int main(){
       fprintf(stdout, "Started recording to %s at %d/%d FPS.\n", fnamebuf, fps, frameskip+1);
     }
   }
-  
+*/
+
+  // Start PWM output
+  #define MIN_WIDTH 980
+  #define MAX_WIDTH 1500
+  int width = 1000;
+  int step = 10;
+  int servo = 0;
+  int pi = pigpio_start(0, 0);
+  if (pi < 0) {
+    printf( "Error connecting to PWM.\n");
+    return 1;
+  }
+  set_PWM_range(pi, 17, 1000);
+  set_PWM_range(pi, 27, 1000);
+  set_PWM_frequency(pi, 17, 50);
+  set_PWM_frequency(pi, 27, 50);
+
+  for(int i = 0; i < 1000; i++)
+  {
+    // Output PWM
+    set_servo_pulsewidth(pi, 17, 1000);
+    set_servo_pulsewidth(pi, 27, width);
+    printf("Servo 27: %d\n", width);
+
+    // Step
+    width += step;
+    if ((width<MIN_WIDTH) || (width>MAX_WIDTH)) {
+      step = -step;
+      width += step;
+    }
+
+    // Sleep
+    time_sleep(0.01);
+  }
+  pigpio_stop(pi);
+
+  // Done
+  printf("\nServos done.\n");
+  return 0;
+ 
   cout << "Starting.\n" << endl;
   for( int i = 0; i < 30 * 10 * 10; i++) {
 
@@ -737,7 +777,7 @@ int main(){
   }
 
   printf( "Stopping.\n" );    
-  driver.StopRecording();
+  //driver.StopRecording();
   usleep(2 * 1000 * 1000);
   printf( "Done.\n" );    
 
