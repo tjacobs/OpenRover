@@ -40,6 +40,8 @@ struct timeval _last_t;
 // Keyboard key presses
 char key;
 
+int pi;
+
 static const float MAX_THROTTLE = 0.8;
 static const float SPEED_LIMIT = 5.0;
 
@@ -158,7 +160,6 @@ class FlushThread {
   static void* thread_entry(void* arg) {
 
     FlushThread *self = reinterpret_cast<FlushThread*>(arg);
-    fprintf(stderr, "FlushThread: started\n");
     for (;;) {
       sem_wait(&self->sem_);
       pthread_mutex_lock(&self->mutex_);
@@ -552,7 +553,7 @@ class Driver: public CameraReceiver {
     output_fd_ = -1;
     frame_ = 0;
     frameskip_ = 0;
-    autosteer_ = false;
+    autosteer_ = true;
     gettimeofday(&last_t_, NULL);
   }
 
@@ -658,6 +659,10 @@ class Driver: public CameraReceiver {
     if (autosteer_ && controller_.GetControl(&u_a, &u_s, dt)) {
       steering_ = 127 * u_s;
       throttle_ = 127 * u_a;
+      int width = max(980, min(1500, steering_+1200));
+      set_servo_pulsewidth(pi, 17, 1000);
+      set_servo_pulsewidth(pi, 27, width);
+      printf("Servo 27: %d\n", width);
       //teensy.SetControls(frame_ & 4 ? 1 : 0, throttle_, steering_);
       // pca.SetPWM(PWMCHAN_STEERING, steering_);
       // pca.SetPWM(PWMCHAN_ESC, throttle_);
@@ -680,6 +685,17 @@ int main(){
   // Start it up
   printf("\nStarting OpenRover.\n");
 
+  // Start PWM output
+  pi = pigpio_start(0, 0);
+  if (pi < 0) {
+    printf("Error connecting to PWM.\n");
+    return 1;
+  }
+  set_PWM_range(pi, 17, 1000);
+  set_PWM_range(pi, 27, 1000);
+  set_PWM_frequency(pi, 17, 50);
+  set_PWM_frequency(pi, 27, 50);
+
   // Start up our car driver
   Drive drive;
 
@@ -690,22 +706,22 @@ int main(){
   //CvCapture* capture = cvCaptureFromCAM(CV_CAP_ANY);
   //cvSetCaptureProperty(capture, CV_CAP_PROP_FRAME_WIDTH, 320);
   //cvSetCaptureProperty(capture, CV_CAP_PROP_FRAME_HEIGHT, 240);
-/*
+ 
+  // Start disk writing thread 
   if (!flush_thread_.Init()) {
     return 1;
   }
 
+  // Start camera
+  Driver driver;
   int fps = 30;
-
   if (!Camera::Init(640, 480, fps))
     return 1;
-
-  Driver driver;
   if (!Camera::StartRecord(&driver)) {
     return 1;
   }
 
-  // Recording
+  // Start recording
   int frameskip = 4;
   int recording_num = 0;
   struct timeval tv;
@@ -717,47 +733,7 @@ int main(){
       fprintf(stdout, "Started recording to %s at %d/%d FPS.\n", fnamebuf, fps, frameskip+1);
     }
   }
-*/
 
-  // Start PWM output
-  #define MIN_WIDTH 980
-  #define MAX_WIDTH 1500
-  int width = 1000;
-  int step = 10;
-  int servo = 0;
-  int pi = pigpio_start(0, 0);
-  if (pi < 0) {
-    printf( "Error connecting to PWM.\n");
-    return 1;
-  }
-  set_PWM_range(pi, 17, 1000);
-  set_PWM_range(pi, 27, 1000);
-  set_PWM_frequency(pi, 17, 50);
-  set_PWM_frequency(pi, 27, 50);
-
-  for(int i = 0; i < 1000; i++)
-  {
-    // Output PWM
-    set_servo_pulsewidth(pi, 17, 1000);
-    set_servo_pulsewidth(pi, 27, width);
-    printf("Servo 27: %d\n", width);
-
-    // Step
-    width += step;
-    if ((width<MIN_WIDTH) || (width>MAX_WIDTH)) {
-      step = -step;
-      width += step;
-    }
-
-    // Sleep
-    time_sleep(0.01);
-  }
-  pigpio_stop(pi);
-
-  // Done
-  printf("\nServos done.\n");
-  return 0;
- 
   cout << "Starting.\n" << endl;
   for( int i = 0; i < 30 * 10 * 10; i++) {
 
@@ -777,8 +753,9 @@ int main(){
   }
 
   printf( "Stopping.\n" );    
-  //driver.StopRecording();
-  usleep(2 * 1000 * 1000);
+  pigpio_stop(pi);
+  driver.StopRecording();
+  usleep(1 * 1000 * 1000);
   printf( "Done.\n" );    
 
   // We're done
