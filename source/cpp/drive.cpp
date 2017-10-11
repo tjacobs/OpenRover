@@ -401,15 +401,36 @@ bool TophatFilter(const uint8_t *yuv, Vector3f *Bout, float *y_cout, Matrix4f *R
 void Drive::UpdateCamera(const uint8_t *frame) {
   Vector3f B;
   Matrix4f Rk = Matrix4f::Zero();
-  float yc;
+  float y_center;
 
   // Look for that line
-  if (!TophatFilter(frame, &B, &yc, &Rk)) {
+  if (!TophatFilter(frame, &B, &y_center, &Rk)) {
     return;
   }
 
-  // We've got our linear fit B[0:2] and our measurement covariance Rk, time to do the sensor fusion step
-  kalman_filter.UpdateCenterline(B[0], B[1], B[2], yc, Rk);
+  // The road centerline's position, angle, and curvature is represented in B, as:
+  //    ax^2 + bx + c
+  // and the covariance in Rk.
+
+  // The y_center is the vertical center of the original datapoints, where our regression should
+  // have the least amount of error.
+  // We measure the centerline curvature and angle psi_error at this point,
+  // and compute y_error as our perpendicular distance to that line. Simples.
+  //
+  // 
+  //                /
+  // psi_error &   /
+  // curvature -> |___|  <- y_error
+  // at y_center  |
+  //               \
+  //                \
+  //
+  // The regression line is x = a*y^2 + b*y^1 + c
+  //
+  //  xc = a*yc**2 + b*yc + c
+  //
+  // We've got our linear fit B[0:2] (B[a, b, c]) and our measurement covariance Rk, time to do the sensor fusion step
+  kalman_filter.UpdateCenterline(B[0], B[1], B[2], y_center, Rk);
 }
 
 void Drive::UpdateState(const uint8_t *yuv, size_t yuvlen,
@@ -430,17 +451,17 @@ void Drive::UpdateState(const uint8_t *yuv, size_t yuvlen,
   }
 
   kalman_filter.Predict(dt, throttle_in, steering_in);
-  //std::cout << "x after predict " << x_.transpose() << std::endl;
+  std::cout << "x after predict " << x_.transpose() << std::endl;
 
   if (yuvlen == 640*480 + 320*240*2) {
     UpdateCamera(yuv);
-    //std::cout << "x after camera " << x_.transpose() << std::endl;
+    cout << "x = v, delta, y_error, psi_error, curvature, ml_1,ml_2,ml_3,ml_4, srv_a,srv_b,srv_r,srvfb_a,srvfb_b, gyro" << endl;
+    std::cout << "x after camera: " << x_.transpose() << std::endl;
   } else {
-    fprintf(stderr, "Drive::UpdateState: invalid yuvlen %ld, expected %d\n",
-        yuvlen, 320*240*2);
+    fprintf(stderr, "Drive::UpdateState: invalid yuvlen %ld, expected %d\n", yuvlen, 640*480 + 320*240*2);
   }
 
-  kalman_filter.UpdateIMU(gyro[2]);
+  //kalman_filter.UpdateIMU(gyro[2]);
   //std::cout << "x after IMU (" << gyro[2] << ")" << x_.transpose() << std::endl;
 
   // Force psi_e to be forward facing
@@ -473,10 +494,10 @@ void Drive::UpdateState(const uint8_t *yuv, size_t yuvlen,
 
   // and do an kalman_filter update if the wheels are moving.
   if (nds > 0) {
-    kalman_filter.UpdateEncoders(ds/(nds * dt), servo_pos);
+//    kalman_filter.UpdateEncoders(ds/(nds * dt), servo_pos);
     //std::cout << "x after encoders (" << ds/dt << ") " << x_.transpose() << std::endl;
   } else {
-    kalman_filter.UpdateEncoders(0, servo_pos);
+//    kalman_filter.UpdateEncoders(0, servo_pos);
     //std::cout << "x after encoders (" << ds/dt << ") " << x_.transpose() << std::endl;
   }
 
