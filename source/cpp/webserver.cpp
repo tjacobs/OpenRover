@@ -38,13 +38,15 @@ struct {
 	{"jsp", "image/jsp" },  
 	{"xml", "text/xml"  },  
 	{"js",  "text/js"   },
-    {"css", "test/css"  }, 
+    {"css", "text/css"  }, 
+    {"ico", "image/ico" },
 	{0, 0} };
 
 void log(int type, const char *s1, const char *s2, int num)
 {
 	int fd ;
 	char logbuffer[BUFSIZE*2];
+	printf("Webserver: %s: %s: %d\n", s1, s2, num);
 
 	switch (type) {
 	case ERROR: (void)sprintf(logbuffer,"ERROR: %s:%s Errno=%d exiting pid=%d",s1, s2, errno,getpid()); break;
@@ -141,7 +143,7 @@ int main(int argc, char **argv)
 	static struct sockaddr_in serv_addr;
 
 	// Check args
-	if( argc < 3  || argc > 3 || !strcmp(argv[1], "-?") ) {
+/*	if( argc < 3  || argc > 3 || !strcmp(argv[1], "-?") ) {
 		printf("usage: server [port] [server directory] &"
 				 	"\tExample: server 80 ./ &\n\n"
 					"\tOnly Supports:");
@@ -161,7 +163,7 @@ int main(int argc, char **argv)
 	if(chdir(argv[2]) == -1){ 
 		(void)printf("ERROR: Can't Change to directory %s\n",argv[2]);
 		exit(4);
-	}
+	}*/
 
 	if(fork() != 0)
 		return 0;
@@ -174,41 +176,35 @@ int main(int argc, char **argv)
 	log(LOG, "HTTP server starting.", argv[1], getpid());
 
 	// Bind
-	printf("Started 1.\n");
 	if((listenfd = socket(AF_INET, SOCK_STREAM,0)) <0)
 		log(ERROR, "system call","socket",0);
-	port = atoi(argv[1]);
+
+	// Port 8000
+	port = 8000; //atoi(argv[1]);
 	if(port < 0 || port >60000)
-		log(ERROR,"Invalid port number try [1,60000]",argv[1],0);
-	printf("Started 2.\n");
+		log(ERROR,"Invalid port number try [1, 60000]",argv[1],0);
 	serv_addr.sin_family = AF_INET;
 	serv_addr.sin_addr.s_addr = htonl(INADDR_ANY);
 	serv_addr.sin_port = htons(port);
-	printf("Started 3.\n");
 	if(bind(listenfd, (struct sockaddr *)&serv_addr,sizeof(serv_addr)) < 0)
 		log(ERROR,"system call", "bind", 0);
-	printf("Started 4.\n");
 	if(listen(listenfd,64) < 0)
 		log(ERROR,"system call", "listen", 0);
 
 	// Start
-	printf("Started 5.\n");
 	for(hit=1; ;hit++) {
 		// Accept
-		printf("Hit 1.\n");
 		length = sizeof(cli_addr);
 		if((socketfd = accept(listenfd, (struct sockaddr *)&cli_addr, &length)) < 0)
 			log(ERROR,"system call","accept",0);
 
 		// Fork
-		printf("Hit 2.\n");
 		if((pid = fork()) < 0) {
 			log(ERROR,"system call","fork",0);
 		}
 		else {
 			if(pid == 0) {
 				// Service
-				printf("Hit 3.\n");
 				close(listenfd);
 				web(socketfd, hit);
 			} else {
