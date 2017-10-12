@@ -19,7 +19,7 @@
 #   define SIGCLD SIGCHLD
 #endif
 
-struct {
+static struct {
 	const char *ext;
 	const char *filetype;
 } extensions [] = {
@@ -160,10 +160,12 @@ int main(int argc, char **argv)
 		(void)printf("ERROR: Bad top directory %s, see server -?\n",argv[2]);
 		exit(3);
 	}
-	if(chdir(argv[2]) == -1){ 
+*/
+
+	if(chdir("./" /*argv[2]*/) == -1){ 
 		(void)printf("ERROR: Can't Change to directory %s\n",argv[2]);
 		exit(4);
-	}*/
+	}
 
 	if(fork() != 0)
 		return 0;
