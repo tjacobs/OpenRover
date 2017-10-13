@@ -357,7 +357,7 @@ bool TophatFilter(const uint8_t *yuv, Vector3f *Bout, float *y_cout, Matrix4f *R
   }
 
   // Print
-  std::cout << "Number of activations: " << regN << "\n";
+  //std::cout << "Number of activations: " << regN << "\n";
 
   // If not enough data, don't even try to do an update
   if (regN < 8) {
@@ -454,12 +454,12 @@ void Drive::UpdateState(const uint8_t *yuv, size_t yuvlen,
   }
 
   kalman_filter.Predict(dt, throttle_in, steering_in);
-  std::cout << "x after predict " << x_.transpose() << std::endl;
+  //std::cout << "x after predict " << x_.transpose() << std::endl;
 
   if (yuvlen == 640*480 + 320*240*2) {
     UpdateCamera(yuv);
-    cout << "x = v, delta, y_error, psi_error, curvature, ml_1,ml_2,ml_3,ml_4, srv_a,srv_b,srv_r,srvfb_a,srvfb_b, gyro" << endl;
-    std::cout << "x after camera: " << x_.transpose() << std::endl;
+    //cout << "x = v, delta, y_error, psi_error, curvature, ml_1,ml_2,ml_3,ml_4, srv_a,srv_b,srv_r,srvfb_a,srvfb_b, gyro" << endl;
+    //std::cout << "x after camera: " << x_.transpose() << std::endl;
   } else {
     fprintf(stderr, "Drive::UpdateState: invalid yuvlen %ld, expected %d\n", yuvlen, 640*480 + 320*240*2);
   }
@@ -766,7 +766,7 @@ int main(){
   uWS::Hub h;
 
   // Serve HTTP
-  indexHtml << std::ifstream ("../web/index.html").rdbuf();
+  indexHtml << std::ifstream("../web/index.html").rdbuf();
   if (!indexHtml.str().length()) {
     std::cerr << "Failed to load index.html" << std::endl;
     return -1;
@@ -775,7 +775,10 @@ int main(){
     if (req.getUrl().valueLength == 1) {
       res->end(indexHtml.str().data(), indexHtml.str().length());
     } else {
-      res->end(nullptr, 0);
+      stringstream file;
+      string filename = "../web" + req.getUrl().toString();
+      file << std::ifstream(filename).rdbuf();
+      res->end(file.str().data(), file.str().length());
     }
   });
 
