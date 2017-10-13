@@ -683,10 +683,10 @@ class Driver: public CameraReceiver {
     if (autosteer_ && controller_.GetControl(&u_a, &u_s, dt)) {
       steering_ = 127 * u_s;
       throttle_ = 127 * u_a;
-      int width = max(980, min(1500, steering_+1200));
+      int width = max(980, min(1500, steering_*10+1200));
       set_servo_pulsewidth(pi, 17, 1000);
       set_servo_pulsewidth(pi, 27, width);
-      printf("Servo 27: %d\n", width);
+      //printf("Servo 27: %d\n", width);
       //teensy.SetControls(frame_ & 4 ? 1 : 0, throttle_, steering_);
       // pca.SetPWM(PWMCHAN_STEERING, steering_);
       // pca.SetPWM(PWMCHAN_ESC, throttle_);
@@ -783,13 +783,15 @@ int main(){
   });
 
   // Serve websockets
-  const char* message = "Websocket";    
   h.onMessage([](uWS::WebSocket<uWS::SERVER> *ws, char *message, size_t length, uWS::OpCode opCode) {
-    ws->send(message, strlen(message), opCode);
+    stringstream file;
+    string filename = "./test.jpg";
+    file << std::ifstream(filename).rdbuf();
+    ws->send(file.str().data(), file.str().length(), uWS::OpCode::BINARY);
   });
 
   // Run
-  if (h.listen(3000)) {
+  if (h.listen(8081)) {
     h.run();
   }
 
