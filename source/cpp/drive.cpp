@@ -5,6 +5,7 @@
 #include <pigpiod_if2.h>
 #include <opencv/cv.h>
 #include <opencv/highgui.h>
+#include <opencv2/opencv.hpp>
 #include "drive.h"
 #include "cam.h"
 #include <uWS/uWS.h>
@@ -761,6 +762,12 @@ int main(){
   }
 
   cout << "Starting.\n" << endl;
+
+  // Create jpg
+  int weight=400, height=400;
+  cv::Mat black = cv::Mat::zeros(cv::Size(weight, height), CV_8UC3);
+  std::vector<uchar> buff;
+//cv::imencode(".jpg", black, buff);
 
   // Start HTTP and websockets
   uWS::Hub h;
