@@ -8,6 +8,8 @@
 #include "drive.h"
 #include "cam.h"
 #include <uWS/uWS.h>
+#include <fstream>
+#include <sstream>
 
 using namespace std;
 using Eigen::Matrix2f;
@@ -701,26 +703,13 @@ class Driver: public CameraReceiver {
   struct timeval last_t_;
 };
 
+stringstream indexHtml;
 
 int main(){
   
   // Start it up
   printf("\nStarting OpenRover.\n");
 
-  uWS::Hub h;
-  const char* message = "Websocket";
-    
-  h.onMessage([](uWS::WebSocket<uWS::SERVER> *ws, char *message, size_t length, uWS::OpCode opCode) {
-    ws->send(message, strlen(message), opCode);
-  });
-
-  h.onHttpRequest([](uWS::HttpResponse *res, uWS::HttpRequest req, char *data, size_t length, size_t remainingBytes) {
-    res->end("Woo", 3);
-  });
-
-  if (h.listen(3000)) {
-    h.run();
-  }
 
   // Start PWM output
   pi = pigpio_start(0, 0);
@@ -772,6 +761,35 @@ int main(){
   }
 
   cout << "Starting.\n" << endl;
+
+  // Start HTTP and websockets
+  uWS::Hub h;
+
+  // Serve HTTP
+  indexHtml << std::ifstream ("../web/index.html").rdbuf();
+  if (!indexHtml.str().length()) {
+    std::cerr << "Failed to load index.html" << std::endl;
+    return -1;
+  }
+  h.onHttpRequest([](uWS::HttpResponse *res, uWS::HttpRequest req, char *data, size_t length, size_t remainingBytes) {
+    if (req.getUrl().valueLength == 1) {
+      res->end(indexHtml.str().data(), indexHtml.str().length());
+    } else {
+      res->end(nullptr, 0);
+    }
+  });
+
+  // Serve websockets
+  const char* message = "Websocket";    
+  h.onMessage([](uWS::WebSocket<uWS::SERVER> *ws, char *message, size_t length, uWS::OpCode opCode) {
+    ws->send(message, strlen(message), opCode);
+  });
+
+  // Run
+  if (h.listen(3000)) {
+    h.run();
+  }
+
   for( int i = 0; i < 30 * 10 * 10; i++) {
 
     // Get frame
