@@ -1,4 +1,4 @@
-#include "cam.h"
+#include "camera.h"
 
 #include <stdlib.h>
 #include <stdio.h>

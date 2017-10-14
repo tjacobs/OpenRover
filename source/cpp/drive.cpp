@@ -2,12 +2,16 @@
 #include <sys/time.h>
 #include <fcntl.h>
 #include <semaphore.h>
-#include <pigpiod_if2.h>
+
+#ifdef LINUX
+  #include <pigpiod_if2.h>
+#endif
+
 #include <opencv/cv.h>
 #include <opencv/highgui.h>
 #include <opencv2/opencv.hpp>
 #include "drive.h"
-#include "cam.h"
+#include "camera.h"
 #include <uWS/uWS.h>
 #include <fstream>
 #include <sstream>
@@ -153,7 +157,7 @@ class FlushThread {
     count++;
     if (count >= 15) {
       if (siz > 2) {
-        fprintf(stderr, "[FlushThread %d]\r", siz);
+        fprintf(stderr, "[FlushThread %d]\r", (int)siz);
         fflush(stderr);
       }
       count = 0;
@@ -685,8 +689,10 @@ class Driver: public CameraReceiver {
       steering_ = 127 * u_s;
       throttle_ = 127 * u_a;
       int width = max(980, min(1500, steering_*10+1200));
-      set_servo_pulsewidth(pi, 17, 1000);
-      set_servo_pulsewidth(pi, 27, width);
+      #ifdef LINUX
+        set_servo_pulsewidth(pi, 17, 1000);
+        set_servo_pulsewidth(pi, 27, width);
+      #endif
       //printf("Servo 27: %d\n", width);
       //teensy.SetControls(frame_ & 4 ? 1 : 0, throttle_, steering_);
       // pca.SetPWM(PWMCHAN_STEERING, steering_);
@@ -711,29 +717,30 @@ int main(){
   // Start it up
   printf("\nStarting OpenRover.\n");
 
-
   // Start PWM output
-  pi = pigpio_start(0, 0);
-  if (pi < 0) {
-    printf("Error connecting to PWM.\n");
-    return 1;
-  }
-  set_PWM_range(pi, 17, 1000);
-  set_PWM_range(pi, 27, 1000);
-  set_PWM_frequency(pi, 17, 50);
-  set_PWM_frequency(pi, 27, 50);
+  #ifdef LINUX
+    pi = pigpio_start(0, 0);
+    if (pi < 0) {
+      printf("Error connecting to PWM.\n");
+      return 1;
+    }
+    set_PWM_range(pi, 17, 1000);
+    set_PWM_range(pi, 27, 1000);
+    set_PWM_frequency(pi, 17, 50);
+    set_PWM_frequency(pi, 27, 50);
+  #endif
 
   // Start up our car driver
   Drive drive;
 
-  // Create window
-  //cvNamedWindow("Camera_Output", 1);
-
   // Start cam
-  //CvCapture* capture = cvCaptureFromCAM(CV_CAP_ANY);
-  //cvSetCaptureProperty(capture, CV_CAP_PROP_FRAME_WIDTH, 320);
-  //cvSetCaptureProperty(capture, CV_CAP_PROP_FRAME_HEIGHT, 240);
- 
+  cv::VideoCapture cap(0);
+  if (!cap.isOpened())
+  {
+      std::cout << "Failed to open cam. " << std::endl;
+      return -1;
+  }
+
   // Start disk writing thread 
   if (!flush_thread_.Init()) {
     return 1;
@@ -763,11 +770,18 @@ int main(){
 
   cout << "Starting.\n" << endl;
 
-  // Create jpg
   int weight=400, height=400;
-  cv::Mat black = cv::Mat::zeros(cv::Size(weight, height), CV_8UC3);
-  std::vector<uchar> buff;
-//cv::imencode(".jpg", black, buff);
+  cv::Mat frame = cv::Mat::zeros(cv::Size(weight, height), CV_8UC3);
+
+  // Read from camera
+  if(!cap.read(frame)) {
+    std::cout << "Failed to read from cam. " << std::endl;
+  }
+  cv::imshow("window", frame);
+
+  // Create jpg
+  vector<uchar> buff;
+  cv::imencode(".jpg", frame, buff);
 
   // Start HTTP and websockets
   uWS::Hub h;
@@ -790,11 +804,11 @@ int main(){
   });
 
   // Serve websockets
-  h.onMessage([](uWS::WebSocket<uWS::SERVER> *ws, char *message, size_t length, uWS::OpCode opCode) {
+  h.onMessage([&buff](uWS::WebSocket<uWS::SERVER> *ws, char *message, size_t length, uWS::OpCode opCode) {
     stringstream file;
     string filename = "./test.jpg";
     file << std::ifstream(filename).rdbuf();
-    ws->send(file.str().data(), file.str().length(), uWS::OpCode::BINARY);
+    ws->send((char *)(&buff[0]), buff.size(), uWS::OpCode::BINARY);
   });
 
   // Run
@@ -804,23 +818,19 @@ int main(){
 
   for( int i = 0; i < 30 * 10 * 10; i++) {
 
-    // Get frame
-    //IplImage* frame = cvQueryFrame(capture);
-
-    // Show frame
-    //cvShowImage("Camera_Output", frame);
-
     usleep(1000);
 
     // Wait for that esc
-    //key = cvWaitKey(10);
-    //if (char(key) == 27){
-    //    break;
-    //}
+    key = cvWaitKey(10);
+    if (char(key) == 27){
+        break;
+    }
   }
 
   printf( "Stopping.\n" );    
-  pigpio_stop(pi);
+  #ifdef LINUX
+    pigpio_stop(pi);
+  #endif
   driver.StopRecording();
   usleep(1 * 1000 * 1000);
   printf( "Done.\n" );    
