@@ -712,6 +712,38 @@ class Driver: public CameraReceiver {
 
 stringstream indexHtml;
 
+vector<uchar> buff;
+
+static void* thread_entry(void* arg) {
+  FlushThread *self = reinterpret_cast<FlushThread*>(arg);
+
+  printf("Thread: started\n");
+
+  // Start cam
+  cv::VideoCapture cap(0);
+  if (!cap.isOpened())
+  {
+      std::cout << "Failed to open cam. " << std::endl;
+  }
+
+  int weight=400, height=400;
+  cv::Mat frame = cv::Mat::zeros(cv::Size(weight, height), CV_8UC3);
+
+  for( int i = 0; i < 30 * 10 * 10; i++) {
+    // Read from camera
+    if(!cap.read(frame)) {
+      std::cout << "Failed to read from cam. " << std::endl;
+    }
+
+    // Create jpg
+    cv::imencode(".jpg", frame, buff);
+
+    usleep(1000);
+
+  }
+
+}
+
 int main(){
   
   // Start it up
@@ -733,13 +765,6 @@ int main(){
   // Start up our car driver
   Drive drive;
 
-  // Start cam
-  cv::VideoCapture cap(0);
-  if (!cap.isOpened())
-  {
-      std::cout << "Failed to open cam. " << std::endl;
-      return -1;
-  }
 
   // Start disk writing thread 
   if (!flush_thread_.Init()) {
@@ -770,18 +795,6 @@ int main(){
 
   cout << "Starting.\n" << endl;
 
-  int weight=400, height=400;
-  cv::Mat frame = cv::Mat::zeros(cv::Size(weight, height), CV_8UC3);
-
-  // Read from camera
-  if(!cap.read(frame)) {
-    std::cout << "Failed to read from cam. " << std::endl;
-  }
-  cv::imshow("window", frame);
-
-  // Create jpg
-  vector<uchar> buff;
-  cv::imencode(".jpg", frame, buff);
 
   // Start HTTP and websockets
   uWS::Hub h;
@@ -804,12 +817,20 @@ int main(){
   });
 
   // Serve websockets
-  h.onMessage([&buff](uWS::WebSocket<uWS::SERVER> *ws, char *message, size_t length, uWS::OpCode opCode) {
+  h.onMessage([](uWS::WebSocket<uWS::SERVER> *ws, char *message, size_t length, uWS::OpCode opCode) {
     stringstream file;
     string filename = "./test.jpg";
     file << std::ifstream(filename).rdbuf();
     ws->send((char *)(&buff[0]), buff.size(), uWS::OpCode::BINARY);
   });
+
+
+  pthread_t thread_;
+  if (pthread_create(&thread_, NULL, thread_entry, 0) != 0) {
+    perror("FlushThread: pthread_create");
+    return false;
+  }
+
 
   // Run
   if (h.listen(8081)) {
