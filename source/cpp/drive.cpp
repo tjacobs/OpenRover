@@ -463,7 +463,7 @@ void Drive::UpdateState(const uint8_t *yuv, size_t yuvlen,
     //cout << "x = v, delta, y_error, psi_error, curvature, ml_1,ml_2,ml_3,ml_4, srv_a,srv_b,srv_r,srvfb_a,srvfb_b, gyro" << endl;
     //std::cout << "x after camera: " << x_.transpose() << std::endl;
   } else {
-    fprintf(stderr, "Drive::UpdateState: invalid yuvlen %ld, expected %d\n", yuvlen, 640*480 + 320*240*2);
+    fprintf(stderr, "Drive::UpdateState: invalid yuvlen %d, expected %d\n", (int)yuvlen, 640*480 + 320*240*2);
   }
 
   //kalman_filter.UpdateIMU(gyro[2]);
@@ -711,6 +711,8 @@ stringstream indexHtml;
 
 vector<uchar> buff;
 
+pthread_mutex_t buffer_mutex;
+
 static void* thread_entry(void* arg) {
   FlushThread *self = reinterpret_cast<FlushThread*>(arg);
 
@@ -733,16 +735,17 @@ static void* thread_entry(void* arg) {
     }
 
 
-    //pthread_mutex_lock(&mutex_);
+    pthread_mutex_lock(&buffer_mutex);
 
     // Create jpg
     cv::imencode(".jpg", frame, buff);
 
-    //pthread_mutex_unlock(&mutex_);
+    pthread_mutex_unlock(&buffer_mutex);
 
     usleep(1000);
   }
 }
+
 
 int main(){
   
@@ -819,7 +822,11 @@ int main(){
     stringstream file;
     string filename = "./test.jpg";
     file << std::ifstream(filename).rdbuf();
+
+    pthread_mutex_lock(&buffer_mutex);
     ws->send((char *)(&buff[0]), buff.size(), uWS::OpCode::BINARY);
+    pthread_mutex_unlock(&buffer_mutex);
+
   });
 
   // Start flush thread
