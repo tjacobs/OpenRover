@@ -14,6 +14,7 @@ fi
 sudo apt-get install -y libglew-dev
 sudo apt-get install -y libeigen3-dev
 
+# Install Pangolin
 if [ ! -d Pangolin ]; then
 git clone https://github.com/stevenlovegrove/Pangolin.git
 cd Pangolin
@@ -25,10 +26,16 @@ make
 sudo make install
 fi
 
+# Install ORB SLAM
 cd $pwd
 git clone https://github.com/raulmur/ORB_SLAM2.git
 cd ORB_SLAM2
 source build.sh
 cd build
 make
+
+# Install for ROS
+echo 'export ROS_PACKAGE_PATH=${ROS_PACKAGE_PATH}:${pwd}/Examples/ROS' >> ~/.bashrc
+source ~/.bashrc
+source build_ros.sh
 
