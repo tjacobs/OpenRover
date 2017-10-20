@@ -2,11 +2,6 @@
 #include <sys/time.h>
 #include <fcntl.h>
 #include <semaphore.h>
-
-#ifdef LINUX
-  #include <pigpiod_if2.h>
-#endif
-
 #include <opencv/cv.h>
 #include <opencv/highgui.h>
 #include <opencv2/opencv.hpp>
@@ -16,6 +11,13 @@
 #include <fstream>
 #include <sstream>
 
+//#define PI 
+
+#ifdef PI
+  #include <pigpiod_if2.h>
+#endif
+
+// Using
 using namespace std;
 using Eigen::Matrix2f;
 using Eigen::Matrix3f;
@@ -31,7 +33,7 @@ int8_t throttle_ = 0;
 // Our output steering angle
 int8_t steering_ = 0;
 
-// The actual current angle of steering (as servos aren't instant)
+// The actual current angle of steering (servos aren't instant)
 uint8_t servo_pos_ = 110;
 
 // The current IMU values
@@ -48,20 +50,21 @@ struct timeval _last_t;
 // Keyboard key presses
 char key;
 
+// Pi output device
 int pi;
 
+// Consts
 static const float MAX_THROTTLE = 0.8;
 static const float SPEED_LIMIT = 5.0;
-
 static const float ACCEL_LIMIT = 4.0;     // Maximum dv/dt (m/s^2)
 static const float BRAKE_LIMIT = -100.0;  // Minimum dv/dt
 static const float TRACTION_LIMIT = 4.0;  // Maximum v*w product (m/s^2)
 static const float kpy = 1.0;
 static const float kvy = 2.0;
-
 static const float LANE_OFFSET = 0.0;
 static const float LANEOFFSET_PER_K = 0.0;
 
+// Drive
 Drive::Drive() {
   Reset();
 }
@@ -93,16 +96,14 @@ void Drive::Update(float throttle, float steering, float dt) {
 
   // Log
   std::cout << "World state after our prediction: " << _x.transpose() << std::endl;
-
 }
 
+// Clip
 static inline float clip(float x, float min, float max) {
   if (x < min) return min;
   if (x > max) return max;
   return x;
 }
-
-
 
 // Asynchronously flush files to disk
 struct FlushEntry {
@@ -187,7 +188,6 @@ class FlushThread {
   pthread_t thread_;
   sem_t sem_;
 };
-
 FlushThread flush_thread_;
 
 // At what y value down the image do we start looking?
@@ -209,15 +209,12 @@ static const float pixel_scale_m = 0.025;
 static const uint16_t bucketcount[uxsiz * uysiz] = {
 #include "bucketcount.txt"
 };
-
 static const uint16_t floodmap[uxsiz * uysiz] = {
 #include "floodmap.txt"
 };
-
 static const uint8_t udmask[320*(240-ytop)] = {
 #include "udmask.txt"
 };
-
 static const int8_t udplane[320*(240-ytop)*2] = {
 #include "udplane.txt"
 };
@@ -229,12 +226,12 @@ bool TophatFilter(const uint8_t *yuv, Vector3f *Bout, float *y_cout, Matrix4f *R
   memset(accumbuf, 0, uxsiz * uysiz * 3 * sizeof(accumbuf[0]));
 
   // Snapshot at 40 frames in to give the camera time to adjust light
-  static int snapshot = 0;
+/*  static int snapshot = 0;
   snapshot++;
   FILE *fp = NULL;
   if (snapshot == 40) {
     fp = fopen("snapshot.bin", "w");
-  }
+  }*/
 
   // For each yuv, remap into detected
   size_t bufidx = ytop*320;
@@ -246,11 +243,11 @@ bool TophatFilter(const uint8_t *yuv, Vector3f *Bout, float *y_cout, Matrix4f *R
       uint8_t v = yuv[640*480 + 320*240 + bufidx];
 
       // Snapshot YUV values for this pixel
-      if (fp) {
+      /*if (fp) {
         fwrite(&y, 1, 1, fp);
         fwrite(&u, 1, 1, fp);
         fwrite(&v, 1, 1, fp);
-      }
+      }*/
 
       // What is ud mask?  Skip this pixel if the ud mask says so
       if (!udmask[udidx]) continue;
@@ -275,9 +272,9 @@ bool TophatFilter(const uint8_t *yuv, Vector3f *Bout, float *y_cout, Matrix4f *R
       }
 
       // Add to snapshot
-      if (fp) {
+      /*if (fp) {
         fwrite(&accumbuf[uidx*3], 4, 3, fp);
-      }
+      }*/
     }
   }
 
@@ -292,9 +289,9 @@ bool TophatFilter(const uint8_t *yuv, Vector3f *Bout, float *y_cout, Matrix4f *R
       }
 
       // Add to snapshot
-      if (fp) {
+      /*if (fp) {
         fwrite(&accumbuf[uidx*3], 4, 3, fp);
-      }
+      }*/
     }
   }
 
@@ -328,11 +325,11 @@ bool TophatFilter(const uint8_t *yuv, Vector3f *Bout, float *y_cout, Matrix4f *R
         + 3*(accumbuf[3*(j*uxsiz + i + 4) + 2] - accumbuf[3*(j*uxsiz + i + 2) + 2]);
 
       // Add to snapshot
-      if (fp) {
+      /*if (fp) {
         fwrite(&yd, 4, 1, fp);
         fwrite(&ud, 4, 1, fp);
         fwrite(&vd, 4, 1, fp);
-      }
+      }*/
 
       // Calculate detected
       int32_t detected = -ud - ACTIV_THRESH;
@@ -356,13 +353,13 @@ bool TophatFilter(const uint8_t *yuv, Vector3f *Bout, float *y_cout, Matrix4f *R
   }
 
   // Close snapshot
-  if (fp) {
+  /*if (fp) {
     fclose(fp);
     fp = NULL;
-  }
+  }*/
 
   // Print
-  //std::cout << "Number of activations: " << regN << "\n";
+  std::cout << "Number of activations: " << regN << "\n";
 
   // If not enough data, don't even try to do an update
   if (regN < 8) {
@@ -689,7 +686,7 @@ class Driver: public CameraReceiver {
       steering_ = 127 * u_s;
       throttle_ = 127 * u_a;
       int width = max(980, min(1500, steering_*10+1200));
-      #ifdef LINUX
+      #ifdef PI
         set_servo_pulsewidth(pi, 17, 1000);
         set_servo_pulsewidth(pi, 27, width);
       #endif
@@ -720,7 +717,7 @@ static void* thread_entry(void* arg) {
   printf("Thread: started\n");
 
   // Start cam
-  cv::VideoCapture cap(0);
+  cv::VideoCapture cap(6);
   if (!cap.isOpened())
   {
       std::cout << "Failed to open cam. " << std::endl;
@@ -735,13 +732,16 @@ static void* thread_entry(void* arg) {
       std::cout << "Failed to read from cam. " << std::endl;
     }
 
+
+    //pthread_mutex_lock(&mutex_);
+
     // Create jpg
     cv::imencode(".jpg", frame, buff);
 
+    //pthread_mutex_unlock(&mutex_);
+
     usleep(1000);
-
   }
-
 }
 
 int main(){
@@ -750,7 +750,7 @@ int main(){
   printf("\nStarting OpenRover.\n");
 
   // Start PWM output
-  #ifdef LINUX
+  #ifdef PI
     pi = pigpio_start(0, 0);
     if (pi < 0) {
       printf("Error connecting to PWM.\n");
@@ -764,7 +764,6 @@ int main(){
 
   // Start up our car driver
   Drive drive;
-
 
   // Start disk writing thread 
   if (!flush_thread_.Init()) {
@@ -795,7 +794,6 @@ int main(){
 
   cout << "Starting.\n" << endl;
 
-
   // Start HTTP and websockets
   uWS::Hub h;
 
@@ -824,15 +822,14 @@ int main(){
     ws->send((char *)(&buff[0]), buff.size(), uWS::OpCode::BINARY);
   });
 
-
+  // Start flush thread
   pthread_t thread_;
   if (pthread_create(&thread_, NULL, thread_entry, 0) != 0) {
     perror("FlushThread: pthread_create");
     return false;
   }
 
-
-  // Run
+  // Run websockets
   if (h.listen(8081)) {
     h.run();
   }
@@ -849,7 +846,7 @@ int main(){
   }
 
   printf( "Stopping.\n" );    
-  #ifdef LINUX
+  #ifdef PI
     pigpio_stop(pi);
   #endif
   driver.StopRecording();
