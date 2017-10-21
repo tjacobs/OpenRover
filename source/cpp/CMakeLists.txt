@@ -21,5 +21,5 @@ include_directories(userland/host_applications/linux/libs/bcm_host/include)
 
 add_executable(drive drive.cpp kalman_filter.cpp camera_usb.cpp uWS/Extensions.cpp uWS/Group.cpp uWS/Networking.cpp uWS/Hub.cpp uWS/Node.cpp uWS/WebSocket.cpp uWS/HTTPSocket.cpp uWS/Socket.cpp uWS/Epoll.cpp)
 
-target_link_libraries(drive -L/usr/local/lib opencv_core opencv_highgui opencv_video opencv_videoio opencv_imgcodecs ssl crypto z pthread) # Pi: mmal pigpiod_if2 rt uv
+target_link_libraries(drive -L/usr/local/lib opencv_core opencv_highgui opencv_video opencv_videoio opencv_imgcodecs ssl crypto z pthread uv) # Pi: mmal pigpiod_if2 rt
 

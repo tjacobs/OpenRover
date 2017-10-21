@@ -12,6 +12,7 @@
 #include <sstream>
 
 //#define PI 
+//#define ODROID
 
 #ifdef PI
   #include <pigpiod_if2.h>
@@ -708,42 +709,85 @@ class Driver: public CameraReceiver {
 };
 
 stringstream indexHtml;
-
 vector<uchar> buff;
-
 pthread_mutex_t buffer_mutex;
 
-static void* thread_entry(void* arg) {
-  FlushThread *self = reinterpret_cast<FlushThread*>(arg);
+// Websockets thread
+static void* websockets_thread(void* arg) {
 
-  printf("Thread: started\n");
+  cout << "Started websockets thread." << endl;
 
-  // Start cam
-  cv::VideoCapture cap(6);
-  if (!cap.isOpened())
-  {
-      std::cout << "Failed to open cam. " << std::endl;
+  // Start HTTP and websockets
+  uWS::Hub h;
+
+  // Serve HTTP
+  indexHtml << std::ifstream("../web/index.html").rdbuf();
+  if (!indexHtml.str().length()) {
+    std::cerr << "Failed to load index.html" << std::endl;
+    return 0;
+  }
+  h.onHttpRequest([](uWS::HttpResponse *res, uWS::HttpRequest req, char *data, size_t length, size_t remainingBytes) {
+    if (req.getUrl().valueLength == 1) {
+      res->end(indexHtml.str().data(), indexHtml.str().length());
+    } else {
+      stringstream file;
+      string filename = "../web" + req.getUrl().toString();
+      file << std::ifstream(filename).rdbuf();
+      res->end(file.str().data(), file.str().length());
+    }
+  });
+
+  // Serve websockets
+  h.onMessage([](uWS::WebSocket<uWS::SERVER> *ws, char *message, size_t length, uWS::OpCode opCode) {
+
+    // Send jpg image buffer
+    pthread_mutex_lock(&buffer_mutex);
+    ws->send((char *)(&buff[0]), buff.size(), uWS::OpCode::BINARY);
+    pthread_mutex_unlock(&buffer_mutex);
+  });
+
+  // Run websockets
+  if (h.listen(8081)) {
+    h.run();
   }
 
+  return 0;
+}
+
+// Camera thread
+static void* camera_thread(void* arg) {
+
+  // Start cam
+  int video_device_number = 0;
+  #ifdef ODROID
+	video_device_number = 6;
+  #endif
+  cv::VideoCapture cap(video_device_number);
+  if (!cap.isOpened()) {
+      std::cout << "Failed to open camera." << std::endl;
+  }
+
+  // Loop
+  pthread_mutex_init(&buffer_mutex, NULL);
   int weight=400, height=400;
   cv::Mat frame = cv::Mat::zeros(cv::Size(weight, height), CV_8UC3);
+  while(true) {
 
-  for( int i = 0; i < 30 * 10 * 10; i++) {
     // Read from camera
     if(!cap.read(frame)) {
       std::cout << "Failed to read from cam. " << std::endl;
     }
 
-
-    pthread_mutex_lock(&buffer_mutex);
-
     // Create jpg
+    pthread_mutex_lock(&buffer_mutex);
     cv::imencode(".jpg", frame, buff);
-
     pthread_mutex_unlock(&buffer_mutex);
 
+    // Sleep
     usleep(1000);
   }
+
+  return 0;
 }
 
 
@@ -795,72 +839,35 @@ int main(){
     }
   }
 
-  cout << "Starting.\n" << endl;
-
-  // Start HTTP and websockets
-  uWS::Hub h;
-
-  // Serve HTTP
-  indexHtml << std::ifstream("../web/index.html").rdbuf();
-  if (!indexHtml.str().length()) {
-    std::cerr << "Failed to load index.html" << std::endl;
-    return -1;
-  }
-  h.onHttpRequest([](uWS::HttpResponse *res, uWS::HttpRequest req, char *data, size_t length, size_t remainingBytes) {
-    if (req.getUrl().valueLength == 1) {
-      res->end(indexHtml.str().data(), indexHtml.str().length());
-    } else {
-      stringstream file;
-      string filename = "../web" + req.getUrl().toString();
-      file << std::ifstream(filename).rdbuf();
-      res->end(file.str().data(), file.str().length());
-    }
-  });
-
-  // Serve websockets
-  h.onMessage([](uWS::WebSocket<uWS::SERVER> *ws, char *message, size_t length, uWS::OpCode opCode) {
-    stringstream file;
-    string filename = "./test.jpg";
-    file << std::ifstream(filename).rdbuf();
-
-    pthread_mutex_lock(&buffer_mutex);
-    ws->send((char *)(&buff[0]), buff.size(), uWS::OpCode::BINARY);
-    pthread_mutex_unlock(&buffer_mutex);
-
-  });
-
-  // Start flush thread
-  pthread_t thread_;
-  if (pthread_create(&thread_, NULL, thread_entry, 0) != 0) {
-    perror("FlushThread: pthread_create");
-    return false;
+  // Start camera thread
+  pthread_t camera_thread_;
+  if (pthread_create(&camera_thread_, NULL, camera_thread, 0) != 0) {
+    perror("Failed to create camera thread.");
+    return 0;
   }
 
-  // Run websockets
-  if (h.listen(8081)) {
-    h.run();
+  // Start websockets thread
+  pthread_t websockets_thread_;
+  if (pthread_create(&websockets_thread_, NULL, websockets_thread, 0) != 0) {
+    perror("Failed to create websockets thread.");
+    return 0;
   }
 
-  for( int i = 0; i < 30 * 10 * 10; i++) {
+  // Loop
+  while(true) {
 
+    // Sleep
     usleep(1000);
-
-    // Wait for that esc
-    key = cvWaitKey(10);
-    if (char(key) == 27){
-        break;
-    }
   }
 
-  printf( "Stopping.\n" );    
+  // We're done
+  printf( "Stopping...\n" );    
   #ifdef PI
     pigpio_stop(pi);
   #endif
   driver.StopRecording();
   usleep(1 * 1000 * 1000);
   printf( "Done.\n" );    
-
-  // We're done
   //cvReleaseCapture(&capture);
   //cvDestroyWindow("Camera_Output");
   return 0;
