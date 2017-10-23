@@ -10,8 +10,9 @@
 #include <uWS/uWS.h>
 #include <fstream>
 #include <sstream>
+#include "flushthread.h"
 
-//#define PI 
+//#define PI
 //#define ODROID
 
 #ifdef PI
@@ -20,6 +21,7 @@
 
 // Using
 using namespace std;
+using namespace cv;
 using Eigen::Matrix2f;
 using Eigen::Matrix3f;
 using Eigen::Matrix4f;
@@ -29,20 +31,21 @@ using Eigen::Vector3f;
 using Eigen::VectorXf;
 
 // Our output throttle value
-int8_t throttle_ = 0;
+int8_t _throttle = 0;
 
 // Our output steering angle
-int8_t steering_ = 0;
+int8_t _steering = 0;
 
 // The actual current angle of steering (servos aren't instant)
-uint8_t servo_pos_ = 110;
+uint8_t _servo_position = 90;
 
 // The current IMU values
-Eigen::Vector3f accel_(0, 0, 0), gyro_(0, 0, 0);
+Eigen::Vector3f _accelerometer(0, 0, 0);
+Eigen::Vector3f _gyro(0, 0, 0);
 
-// The four wheel encoder values from the four wheels
-uint16_t wheel_pos_[4] = {0, 0, 0, 0};
-uint16_t last_encoders_[4];
+// The wheel encoder values 
+uint16_t _wheel_encoders[2] = {0, 0};
+uint16_t _last_wheel_encoders[2];
 
 // Time keeping
 struct timeval t;
@@ -52,7 +55,7 @@ struct timeval _last_t;
 char key;
 
 // Pi output device
-int pi;
+int8_t pi;
 
 // Consts
 static const float MAX_THROTTLE = 0.8;
@@ -60,10 +63,10 @@ static const float SPEED_LIMIT = 5.0;
 static const float ACCEL_LIMIT = 4.0;     // Maximum dv/dt (m/s^2)
 static const float BRAKE_LIMIT = -100.0;  // Minimum dv/dt
 static const float TRACTION_LIMIT = 4.0;  // Maximum v*w product (m/s^2)
-static const float kpy = 1.0;
-static const float kvy = 2.0;
 static const float LANE_OFFSET = 0.0;
 static const float LANEOFFSET_PER_K = 0.0;
+static const float kpy = 1.0;
+static const float kvy = 2.0;
 
 // Drive
 Drive::Drive() {
@@ -82,7 +85,7 @@ void Drive::Update(float throttle, float steering, float dt) {
 
   // Freak out if we freaked out
   if(isinf(_x[0]) || isnan(_x[0])) {
-    fprintf(stderr, "Caution: Massive freakout currently underweigh.\n");
+    fprintf(stderr, "Caution: Massive freakout.\n");
     Reset();
     return;
   }
@@ -92,7 +95,7 @@ void Drive::Update(float throttle, float steering, float dt) {
     _first_frame = false;
   }
 
-  // After 'dt' milliseconds since we last thought about it, what would we expect the world to look like now? 
+  // After 'dt' milliseconds since we last processed, what would we expect the world to look like now? 
   kalman_filter.Predict(dt, throttle, steering);
 
   // Log
@@ -106,204 +109,15 @@ static inline float clip(float x, float min, float max) {
   return x;
 }
 
-// Asynchronously flush files to disk
-struct FlushEntry {
-  int fd_;
-  uint8_t *buf_;
-  size_t len_;
-
-  FlushEntry() { buf_ = NULL; }
-  FlushEntry(int fd, uint8_t *buf, size_t len):
-    fd_(fd), buf_(buf), len_(len) {}
-
-  void flush() {
-    if (len_ == -1) {
-      fprintf(stderr, "FlushThread: closing fd %d\n", fd_);
-      close(fd_);
-    }
-    if (buf_ != NULL) {
-      if (write(fd_, buf_, len_) != len_) {
-        perror("FlushThread write");
-      }
-      delete[] buf_;
-      buf_ = NULL;
-    }
-  }
-};
-
-class FlushThread {
- public:
-  FlushThread() {
-    pthread_mutex_init(&mutex_, NULL);
-    sem_init(&sem_, 0, 0);
-  }
-
-  ~FlushThread() {
-  }
-
-  bool Init() {
-    if (pthread_create(&thread_, NULL, thread_entry, this) != 0) {
-      perror("FlushThread: pthread_create");
-      return false;
-    }
-    return true;
-  }
-
-  void AddEntry(int fd, uint8_t *buf, size_t len) {
-    static int count = 0;
-    pthread_mutex_lock(&mutex_);
-    flush_queue_.push_back(FlushEntry(fd, buf, len));
-    size_t siz = flush_queue_.size();
-    pthread_mutex_unlock(&mutex_);
-    sem_post(&sem_);
-    count++;
-    if (count >= 15) {
-      if (siz > 2) {
-        fprintf(stderr, "[FlushThread %d]\r", (int)siz);
-        fflush(stderr);
-      }
-      count = 0;
-    }
-  }
-
- private:
-  static void* thread_entry(void* arg) {
-
-    FlushThread *self = reinterpret_cast<FlushThread*>(arg);
-    for (;;) {
-      sem_wait(&self->sem_);
-      pthread_mutex_lock(&self->mutex_);
-      if (!self->flush_queue_.empty()) {
-        FlushEntry e = self->flush_queue_.front();
-        self->flush_queue_.pop_front();
-        pthread_mutex_unlock(&self->mutex_);
-        e.flush();
-      } else {
-        pthread_mutex_unlock(&self->mutex_);
-      }
-    }
-  }
-
-  std::deque<FlushEntry> flush_queue_;
-  pthread_mutex_t mutex_;
-  pthread_t thread_;
-  sem_t sem_;
-};
-FlushThread flush_thread_;
-
 // At what y value down the image do we start looking?
 static const int ytop = 100;
 
-// The uxrange is (-56, 55) the uyrange is (2, 59), so x0=-56 and y0-2
-static const int ux0 = -56, uy0 = 2;
+// Buffer for jpg encoded output
+vector<uchar> jpg_buffer;
+pthread_mutex_t buffer_mutex;
 
-// Threshold for the difference between track lane and ground U value. Reduce to 15 for shiny floors.
-static const int ACTIV_THRESH = 30;
-
-// U size, width and height
-static const int uxsiz = 111, uysiz = 57;
-
-// How wide is one pixel in the real world?
-static const float pixel_scale_m = 0.025;
-
-// Bucketcount has resolution: (57, 111), (3197, 2)
-static const uint16_t bucketcount[uxsiz * uysiz] = {
-#include "bucketcount.txt"
-};
-static const uint16_t floodmap[uxsiz * uysiz] = {
-#include "floodmap.txt"
-};
-static const uint8_t udmask[320*(240-ytop)] = {
-#include "udmask.txt"
-};
-static const int8_t udplane[320*(240-ytop)*2] = {
-#include "udplane.txt"
-};
 
 bool TophatFilter(const uint8_t *yuv, Vector3f *Bout, float *y_cout, Matrix4f *Rkout) {
-
-  // Input is a 640x480 YUV420 image, create buffer
-  int32_t accumbuf[uxsiz * uysiz * 3];
-  memset(accumbuf, 0, uxsiz * uysiz * 3 * sizeof(accumbuf[0]));
-
-  // Snapshot at 40 frames in to give the camera time to adjust light
-/*  static int snapshot = 0;
-  snapshot++;
-  FILE *fp = NULL;
-  if (snapshot == 40) {
-    fp = fopen("snapshot.bin", "w");
-  }*/
-
-  // For each yuv, remap into detected
-  size_t bufidx = ytop*320;
-  size_t udidx = 0;
-  for (int j = 0; j < 240 - ytop; j++) {
-    for (int i = 0; i < 320; i++, bufidx++, udidx++) {
-      uint8_t y = yuv[(j+ytop)*2*640 + 2*i];
-      uint8_t u = yuv[640*480 + bufidx];
-      uint8_t v = yuv[640*480 + 320*240 + bufidx];
-
-      // Snapshot YUV values for this pixel
-      /*if (fp) {
-        fwrite(&y, 1, 1, fp);
-        fwrite(&u, 1, 1, fp);
-        fwrite(&v, 1, 1, fp);
-      }*/
-
-      // What is ud mask?  Skip this pixel if the ud mask says so
-      if (!udmask[udidx]) continue;
-
-      // Write at dx dy into our buffer 
-      int dx = udplane[udidx*2] - ux0;
-      int dy = udplane[udidx*2 + 1] - uy0;
-      accumbuf[(uxsiz * dy + dx) * 3] += y;
-      accumbuf[(uxsiz * dy + dx) * 3 + 1] += u;
-      accumbuf[(uxsiz * dy + dx) * 3 + 2] += v;
-    }
-  }
-
-  // Take an average
-  size_t uidx = 0;
-  for (int j = 0; j < uysiz; j++) {
-    for (int i = 0; i < uxsiz; uidx++, i++) {
-      if (bucketcount[uidx] > 0) {
-        accumbuf[uidx*3] /= bucketcount[uidx];
-        accumbuf[uidx*3 + 1] /= bucketcount[uidx];
-        accumbuf[uidx*3 + 2] /= bucketcount[uidx];
-      }
-
-      // Add to snapshot
-      /*if (fp) {
-        fwrite(&accumbuf[uidx*3], 4, 3, fp);
-      }*/
-    }
-  }
-
-  // Flood fill
-  uidx = 0;
-  for (int j = 0; j < uysiz; j++) {
-    for (int i = 0; i < uxsiz; uidx++, i++) {
-      if (bucketcount[uidx] == 0) {
-        accumbuf[uidx*3] = accumbuf[floodmap[uidx]*3];
-        accumbuf[uidx*3 + 1] = accumbuf[floodmap[uidx]*3 + 1];
-        accumbuf[uidx*3 + 2] = accumbuf[floodmap[uidx]*3 + 2];
-      }
-
-      // Add to snapshot
-      /*if (fp) {
-        fwrite(&accumbuf[uidx*3], 4, 3, fp);
-      }*/
-    }
-  }
-
-  // Take horizontal cumulative sum
-  for (int j = 0; j < uysiz; j++) {
-    for (int i = 1; i < uxsiz; i++) {
-      accumbuf[3*(j*uxsiz + i)] += accumbuf[3*(j*uxsiz + i - 1)];
-      accumbuf[3*(j*uxsiz + i) + 1] += accumbuf[3*(j*uxsiz + i - 1) + 1];
-      accumbuf[3*(j*uxsiz + i) + 2] += accumbuf[3*(j*uxsiz + i - 1) + 2];
-    }
-  }
 
   // Take horizontal convolution with tophat kernel (it looks like a tophat): [-1, -1, 2, 2, -1, -1]
   // And add linear regression points XTX, Xty, yTy, N.
@@ -313,7 +127,8 @@ bool TophatFilter(const uint8_t *yuv, Vector3f *Bout, float *y_cout, Matrix4f *R
   double regxsum = 0;
   double regwsum = 0;
   int regN = 0;
-  for (int j = 0; j < uysiz; j++) {
+  
+  /*for (int j = 0; j < uysiz; j++) {
     for (int i = 0; i < uxsiz-7; i++) {
       int32_t yd =
         -(accumbuf[3*(j*uxsiz + i + 6)] - accumbuf[3*(j*uxsiz + i)])
@@ -324,13 +139,6 @@ bool TophatFilter(const uint8_t *yuv, Vector3f *Bout, float *y_cout, Matrix4f *R
       int32_t vd =
         -(accumbuf[3*(j*uxsiz + i + 6) + 2] - accumbuf[3*(j*uxsiz + i) + 2])
         + 3*(accumbuf[3*(j*uxsiz + i + 4) + 2] - accumbuf[3*(j*uxsiz + i + 2) + 2]);
-
-      // Add to snapshot
-      /*if (fp) {
-        fwrite(&yd, 4, 1, fp);
-        fwrite(&ud, 4, 1, fp);
-        fwrite(&vd, 4, 1, fp);
-      }*/
 
       // Calculate detected
       int32_t detected = -ud - ACTIV_THRESH;
@@ -351,13 +159,7 @@ bool TophatFilter(const uint8_t *yuv, Vector3f *Bout, float *y_cout, Matrix4f *R
         regN += 1;
       }
     }
-  }
-
-  // Close snapshot
-  /*if (fp) {
-    fclose(fp);
-    fp = NULL;
-  }*/
+  } */
 
   // Print
   std::cout << "Number of activations: " << regN << "\n";
@@ -439,10 +241,8 @@ void Drive::UpdateCamera(const uint8_t *frame) {
   kalman_filter.UpdateCenterline(B[0], B[1], B[2], y_center, Rk);
 }
 
-void Drive::UpdateState(const uint8_t *yuv, size_t yuvlen,
-      float throttle_in, float steering_in,
-      const Vector3f &accel, const Vector3f &gyro,
-      uint8_t servo_pos, const uint16_t *wheel_encoders, float dt) {
+void Drive::UpdateState(const uint8_t *yuv, size_t yuvlen, float throttle_in, float steering_in,
+      const Vector3f &accel, const Vector3f &gyro, uint8_t servo_pos, const uint16_t *wheel_encoders, float dt) {
   Eigen::VectorXf &x_ = kalman_filter.GetState();
 
   if (isinf(x_[0]) || isnan(x_[0])) {
@@ -452,19 +252,19 @@ void Drive::UpdateState(const uint8_t *yuv, size_t yuvlen,
   }
 
   if (_first_frame) {
-    memcpy(last_encoders_, wheel_encoders, 4*sizeof(uint16_t));
+    memcpy(_last_wheel_encoders, _wheel_encoders, 2*sizeof(uint16_t));
     _first_frame = false;
   }
 
   kalman_filter.Predict(dt, throttle_in, steering_in);
   //std::cout << "x after predict " << x_.transpose() << std::endl;
 
+  UpdateCamera(yuv);
   if (yuvlen == 640*480 + 320*240*2) {
-    UpdateCamera(yuv);
     //cout << "x = v, delta, y_error, psi_error, curvature, ml_1,ml_2,ml_3,ml_4, srv_a,srv_b,srv_r,srvfb_a,srvfb_b, gyro" << endl;
     //std::cout << "x after camera: " << x_.transpose() << std::endl;
   } else {
-    fprintf(stderr, "Drive::UpdateState: invalid yuvlen %d, expected %d\n", (int)yuvlen, 640*480 + 320*240*2);
+//    fprintf(stderr, "Drive::UpdateState: invalid yuvlen %d, expected %d\n", (int)yuvlen, 640*480 + 320*240*2);
   }
 
   //kalman_filter.UpdateIMU(gyro[2]);
@@ -490,13 +290,13 @@ void Drive::UpdateState(const uint8_t *yuv, size_t yuvlen,
 
   // average ds among wheel encoders which are actually moving
   float ds = 0, nds = 0;
-  for (int i = 2; i < 4; i++) {  // only use rear encoders
-    if (wheel_encoders[i] != last_encoders_[i]) {
-      ds += (uint16_t) (wheel_encoders[i] - last_encoders_[i]);
+  for (int i = 0; i < 2; i++) {
+    if (_wheel_encoders[i] != _last_wheel_encoders[i]) {
+      ds += (uint16_t) (_wheel_encoders[i] - _last_wheel_encoders[i]);
       nds += 1;
     }
   }
-  memcpy(last_encoders_, wheel_encoders, 4*sizeof(uint16_t));
+  memcpy(_last_wheel_encoders, _wheel_encoders, 2*sizeof(uint16_t));
 
   // and do an kalman_filter update if the wheels are moving.
   if (nds > 0) {
@@ -618,6 +418,8 @@ class Driver: public CameraReceiver {
     struct timeval t;
     gettimeofday(&t, NULL);
     frame_++;
+
+    /*
     if (IsRecording() && frame_ > frameskip_) {
       frame_ = 0;
 
@@ -670,23 +472,24 @@ class Driver: public CameraReceiver {
     }
     t0 = t;
     }
+    */
 
     // Update Kalman Filter
-    float u_a = throttle_ / 127.0;
-    float u_s = steering_ / 127.0;
+    float u_a = _throttle / 127.0;
+    float u_s = _steering / 127.0;
     float dt = t.tv_sec - last_t_.tv_sec + (t.tv_usec - last_t_.tv_usec) * 1e-6;
     controller_.UpdateState(buf, length,
             u_a, u_s,
-            accel_, gyro_,
-            servo_pos_, wheel_pos_,
+            _accelerometer, _gyro,
+            _servo_position, _wheel_encoders,
             dt);
     last_t_ = t;
 
     // Output actuations
     if (autosteer_ && controller_.GetControl(&u_a, &u_s, dt)) {
-      steering_ = 127 * u_s;
-      throttle_ = 127 * u_a;
-      int width = max(980, min(1500, steering_*10+1200));
+      _steering = 127 * u_s;
+      _throttle = 127 * u_a;
+      int width = max(980, min(1500, _steering*10+1200));
       #ifdef PI
         set_servo_pulsewidth(pi, 17, 1000);
         set_servo_pulsewidth(pi, 27, width);
@@ -708,13 +511,12 @@ class Driver: public CameraReceiver {
   struct timeval last_t_;
 };
 
-stringstream indexHtml;
-vector<uchar> buff;
-pthread_mutex_t buffer_mutex;
 
 // Websockets thread
+stringstream indexHtml;
 static void* websockets_thread(void* arg) {
 
+  // Log
   cout << "Started websockets thread." << endl;
 
   // Start HTTP and websockets
@@ -742,7 +544,7 @@ static void* websockets_thread(void* arg) {
 
     // Send jpg image buffer
     pthread_mutex_lock(&buffer_mutex);
-    ws->send((char *)(&buff[0]), buff.size(), uWS::OpCode::BINARY);
+    ws->send((char *)(&jpg_buffer[0]), jpg_buffer.size(), uWS::OpCode::BINARY);
     pthread_mutex_unlock(&buffer_mutex);
   });
 
@@ -750,9 +552,13 @@ static void* websockets_thread(void* arg) {
   if (h.listen(8081)) {
     h.run();
   }
-
   return 0;
 }
+
+// Start it up
+Drive drive;
+
+Driver driver;
 
 // Camera thread
 static void* camera_thread(void* arg) {
@@ -760,27 +566,92 @@ static void* camera_thread(void* arg) {
   // Start cam
   int video_device_number = 0;
   #ifdef ODROID
-	video_device_number = 6;
+	  video_device_number = 6;
   #endif
   cv::VideoCapture cap(video_device_number);
   if (!cap.isOpened()) {
-      std::cout << "Failed to open camera." << std::endl;
+    std::cout << "Failed to open camera." << std::endl;
   }
+  cap.set(cv::CAP_PROP_FRAME_WIDTH, 640);
+  cap.set(cv::CAP_PROP_FRAME_HEIGHT, 480);
 
   // Loop
   pthread_mutex_init(&buffer_mutex, NULL);
-  int weight=400, height=400;
-  cv::Mat frame = cv::Mat::zeros(cv::Size(weight, height), CV_8UC3);
+  cv::Mat frame = cv::Mat::zeros(cv::Size(0, 0), CV_8UC3);
   while(true) {
 
     // Read from camera
     if(!cap.read(frame)) {
-      std::cout << "Failed to read from cam. " << std::endl;
+      std::cout << "Failed to read from camera. " << std::endl;
     }
+
+    // Convert to YUV
+    cvtColor(frame, frame, CV_BGR2YUV);
+
+    // Process
+    int channels = 3;
+    uchar *input = (uchar*)(frame.data);
+    for(int j = 0; j < frame.rows; j++){
+        for(int i = 0; i < frame.cols; i++){
+            // Read YUV
+            uchar y = input[frame.step * j + i*channels + 0];
+            uchar u = input[frame.step * j + i*channels + 1];
+            uchar v = input[frame.step * j + i*channels + 2];
+
+            // Write BGR
+            if(false) {
+              // Find red (high v)
+              input[frame.step * j + i*channels + 0] = v;
+              input[frame.step * j + i*channels + 1] = v;
+              input[frame.step * j + i*channels + 2] = v;
+            }
+            else {
+              // Find yellow (low u)
+              input[frame.step * j + i*channels + 0] = 255 - u;
+              input[frame.step * j + i*channels + 1] = 255 - u;
+              input[frame.step * j + i*channels + 2] = 255 - u;
+            }
+        }
+    }
+
+    // Detect edges
+    cv::Mat edges = Mat::zeros(Size(0, 0), CV_8UC3);
+    cvtColor(frame, edges, CV_BGR2GRAY);
+    GaussianBlur(edges, edges, Size(7, 7), 1.5, 1.5);
+    Canny(edges, frame, 0, 30, 3);
+
+    // Draw lines
+    rectangle(frame, Rect(10, 20, 30, 40), Scalar(200, 100, 0), 2, 8, 0);
+
+    // Draw centerline
+    int width = 640;
+    int height = 480;
+    int top_line = 100;
+    int line_height = height - top_line;
+    static float centerline_x = width/2;
+    static float centerline_m = 0.1;
+
+    centerline_x+=2;
+    if(centerline_x > width) {
+      centerline_x = 100;
+      centerline_m = -0.2;
+    }
+
+    line(frame, Point(centerline_x, height), Point(centerline_x + centerline_m*line_height, top_line), Scalar(200, 100, 0), 2, 8, 0);
+  /*  std::vector<uchar> vec(edges.rows*edges.cols*3);
+    if (frame.isContinuous()) {
+      vec.assign(edges.begin<int8_t>(), edges.end<int8_t>());
+    }
+    else {
+      printf("Error, OpenCV buffer not continuous.\n");
+    }*/
+
+    // Process frame
+//    driver.OnFrame(&vec[0], vec.size());
 
     // Create jpg
     pthread_mutex_lock(&buffer_mutex);
-    cv::imencode(".jpg", frame, buff);
+    imencode(".jpg", frame, jpg_buffer);
     pthread_mutex_unlock(&buffer_mutex);
 
     // Sleep
@@ -790,11 +661,11 @@ static void* camera_thread(void* arg) {
   return 0;
 }
 
-
+// Main
 int main(){
   
   // Start it up
-  printf("\nStarting OpenRover.\n");
+  printf("Starting OpenRover.\n");
 
   // Start PWM output
   #ifdef PI
@@ -809,19 +680,16 @@ int main(){
     set_PWM_frequency(pi, 27, 50);
   #endif
 
-  // Start up our car driver
-  Drive drive;
-
   // Start disk writing thread 
   if (!flush_thread_.Init()) {
     return 1;
   }
 
   // Start camera
-  Driver driver;
   int fps = 30;
-  if (!Camera::Init(640, 480, fps))
+  if (!Camera::Init(640, 480, fps)) {
     return 1;
+  }
   if (!Camera::StartRecord(&driver)) {
     return 1;
   }
