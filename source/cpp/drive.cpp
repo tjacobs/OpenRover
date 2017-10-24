@@ -560,6 +560,10 @@ Drive drive;
 
 Driver driver;
 
+Mat cameraMatrix;
+Mat distCoeffs;
+
+
 // Camera thread
 static void* camera_thread(void* arg) {
 
@@ -585,8 +589,18 @@ static void* camera_thread(void* arg) {
       std::cout << "Failed to read from camera. " << std::endl;
     }
 
+//    cv::Mat frame2 = cv::Mat::zeros(cv::Size(0, 0), CV_8UC3);
+//    undistort(frame, frame2, cameraMatrix, distCoeffs);
+
     // Convert to YUV
     cvtColor(frame, frame, CV_BGR2YUV);
+
+    Matrix3f regXTX = Matrix3f::Zero();
+    Vector3f regXTy = Vector3f::Zero();
+    double regyTy = 0;
+    double regxsum = 0;
+    double regwsum = 0;
+    int regN = 0;
 
     // Process
     int channels = 3;
@@ -599,7 +613,7 @@ static void* camera_thread(void* arg) {
             uchar v = input[frame.step * j + i*channels + 2];
 
             // Write BGR
-            if(false) {
+            if(true) {
               // Find red (high v)
               input[frame.step * j + i*channels + 0] = v;
               input[frame.step * j + i*channels + 1] = v;
@@ -611,19 +625,73 @@ static void* camera_thread(void* arg) {
               input[frame.step * j + i*channels + 1] = 255 - u;
               input[frame.step * j + i*channels + 2] = 255 - u;
             }
+
+
+            int32_t detected = -(255-u) +110;
+//            cout << "Det " << detected << endl;
+            if (detected > 0) {
+
+              // Add x, y to linear regression
+              float pixel_scale_m = 0.025;
+              float pu = pixel_scale_m * (i - 50);
+              float pv = pixel_scale_m * (j);
+
+              // Use activation as regression weight
+              float w = detected;
+
+              Vector3f regX(w*pv*pv, w*pv, w); // w*v^2, w*v, w
+
+              regxsum += w*pv;
+              regwsum += w;
+
+              regXTX.noalias() += regX * regX.transpose();
+              regXTy.noalias() += regX * w * pu;
+              regyTy += w * w * pu * pu;
+              regN += 1;
+            }
+
         }
     }
 
+
+    cout << "Count: " << regN << endl;
+    cout << "Points: " << regXTX.transpose() << endl;
+
+
+
+  // Linear fit B = XTX.inverse * XTy
+  Matrix3f XTXinv = regXTX.inverse();
+  Vector3f B = XTXinv * regXTy;
+  //*Bout = B;
+
+  // (XB).T y
+  // BT XTy
+  float r2 = B.dot(regXTX * B) - 2*B.dot(regXTy) + regyTy;
+  r2 *= 100.0 / (regN - 1);
+
+  // Save y_c
+//  *y_cout = regxsum / regwsum;
+
+#if 0
+  std::cout << "XTX\n" << regXTX << "\n";
+  std::cout << "XTy " << regXTy.transpose() << "\n";
+  std::cout << "yTy " << regyTy << "\n";
+  std::cout << "XTXinv\n" << XTXinv << "\n";
+#endif
+
+#if 1
+  cout << "B " << B.transpose() << "\n";
+  //cout << "r2 " << r2 << "\n";
+  //cout << "y_c " << *y_cout << "\n";
+#endif
+
     // Detect edges
-    cv::Mat edges = Mat::zeros(Size(0, 0), CV_8UC3);
+/*    cv::Mat edges = Mat::zeros(Size(0, 0), CV_8UC3);
     cvtColor(frame, edges, CV_BGR2GRAY);
     GaussianBlur(edges, edges, Size(7, 7), 1.5, 1.5);
     Canny(edges, frame, 0, 30, 3);
+    */
 
-    // Draw lines
-    rectangle(frame, Rect(10, 20, 30, 40), Scalar(200, 100, 0), 2, 8, 0);
-
-    // Draw centerline
     int width = 640;
     int height = 480;
     int top_line = 100;
@@ -631,20 +699,17 @@ static void* camera_thread(void* arg) {
     static float centerline_x = width/2;
     static float centerline_m = 0.1;
 
-    centerline_x+=2;
+    // Draw box
+    rectangle(frame, Rect(20, 20, width-40, height-40), Scalar(200, 100, 0), 2, 8, 0);
+
+    centerline_x+=4;
     if(centerline_x > width) {
       centerline_x = 100;
-      centerline_m = -0.2;
+      centerline_m += -0.2;
     }
 
+    // Draw centerline
     line(frame, Point(centerline_x, height), Point(centerline_x + centerline_m*line_height, top_line), Scalar(200, 100, 0), 2, 8, 0);
-  /*  std::vector<uchar> vec(edges.rows*edges.cols*3);
-    if (frame.isContinuous()) {
-      vec.assign(edges.begin<int8_t>(), edges.end<int8_t>());
-    }
-    else {
-      printf("Error, OpenCV buffer not continuous.\n");
-    }*/
 
     // Process frame
 //    driver.OnFrame(&vec[0], vec.size());
@@ -679,6 +744,23 @@ int main(){
     set_PWM_frequency(pi, 17, 50);
     set_PWM_frequency(pi, 27, 50);
   #endif
+
+  // Get camera parameters
+  FileStorage fs;
+  fs.open("cam.yml", FileStorage::READ);
+  if( !fs.isOpened() ){
+      cerr << "Failed to open camera settings file." << endl;
+      exit(EXIT_FAILURE);
+  }
+  fs["K"] >> cameraMatrix;
+  fs["D"] >> distCoeffs; 
+  fs.release();
+
+  // Print out the camera parameters
+/*  cout << "\n -- Camera parameters -- " << endl;
+  cout << "\n CameraMatrix = " << endl << " " << cameraMatrix << endl << endl;
+  cout << " Distortion coefficients = " << endl << " " << distCoeffs << endl << endl;
+*/
 
   // Start disk writing thread 
   if (!flush_thread_.Init()) {
