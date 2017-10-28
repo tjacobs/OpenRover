@@ -206,7 +206,7 @@ def pipeline(image):
     # Save original
     image_original = image
 
-    edge_mode = 2
+    edge_mode = 1
 
     # Find Lines Method 1: Blur and Canny. Lots of wiggles.
     if edge_mode == 1:

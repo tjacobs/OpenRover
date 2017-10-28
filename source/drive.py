@@ -166,8 +166,8 @@ while not keys or not keys.esc_key_pressed:
     vision_speed = vision.speed
    
     # Set steering
-#    steering = vision_steering/1 
-#    acceleration = vision_speed/3
+    #steering += vision_steering/15 
+    #acceleration += vision_speed/10
 
     min_acceleration = 0.0
     max_acceleration = 0.0
@@ -176,9 +176,12 @@ while not keys or not keys.esc_key_pressed:
        max_acceleration = 0.25
 
     # Cap
-    steering     = min(max((steering), -0.20), 0.20)
+    steering     = min(max(steering, -0.20), 0.20)
     acceleration = min(max(acceleration, min_acceleration), max_acceleration)
    
+    steering_vision_cap     = min(max((vision_steering/2), -0.20), 0.20)
+    acceleration_vision_cap = min(max(vision_speed/1, min_acceleration), max_acceleration)
+
     # Post process
     frame = process(frame)
 
@@ -191,8 +194,8 @@ while not keys or not keys.esc_key_pressed:
     if motors is not None:
         if differential:
             # Steer tank style
-            motors.setPWM(1, acceleration + steering)
-            motors.setPWM(2, acceleration - steering)
+            motors.setPWM(1, acceleration + steering + acceleration_vision_cap + steering_vision_cap)
+            motors.setPWM(2, acceleration - steering + acceleration_vision_cap - steering_vision_cap)
         else:
             # Steer Ackermann style
             motors.setPWM(2, steering - 0.5)
