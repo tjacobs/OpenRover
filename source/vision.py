@@ -43,7 +43,7 @@ def yuv_select(img, threshold, yuv_option, invert = 0):
     return binary_output
 
 # Function that applies Sobel x or y, then takes an absolute value and applies a threshold.
-@timing
+#@timing
 def sobel_threshold(img, orient='x', sobel_kernel=3, thresh=(0, 255)):
     # Convert to grayscale
     gray = cv2.cvtColor( img, cv2.COLOR_RGB2GRAY )
@@ -101,14 +101,15 @@ def draw_lines(img, lines, color=[255, 0, 0], thickness=5):
 
         # Steer extreme one way or another depending on last value
         steer = (160/2 - smoothed_offset)/150 + smoothed_angle/3
-        if steer > 0: steer = 1
-        else:         steer = -1
+        steer = 0
+#        if steer > 0: steer = 1
+#        else:         steer = -1
         return img, steer, smoothed_speed
 
     lines_found = []
 
     # Lines come in needing this offset to draw on the image
-    xoffset = 30
+    xoffset = 0
     yoffset = 20
     
     # Go through lines
@@ -156,11 +157,10 @@ def draw_lines(img, lines, color=[255, 0, 0], thickness=5):
 
     # Check inf
     if math.isnan(median_angle) or math.isinf(median_angle) or math.isinf(l2x) or math.isinf(l2y):
-        print("INFINITY ERROR *****************************")
         return img, 0, smoothed_speed
 
     # Draw steering line from median x position
-        cv2.line(img, (int(median_x+xoffset), int(median_y+yoffset)), (int(l2x), int(l2y)), [0, 200, 200], 1)
+    cv2.line(img, (int(median_x+xoffset), int(median_y+yoffset)), (int(l2x), int(l2y)), [0, 200, 200], 1)
 
     # Update smoothed offset and angle
     smoothed_offset += ((median_x+xoffset - smoothed_offset)/4)
@@ -170,7 +170,7 @@ def draw_lines(img, lines, color=[255, 0, 0], thickness=5):
     cv2.line(img, (int(smoothed_offset), int(88)), (int(smoothed_offset - 60.0 * smoothed_speed * smoothed_angle), int(88-60.0*smoothed_speed)), [100, 200, 100], 2)
 
     # Return drawn on image, angle, and speed factor
-    steer = (160/2 - smoothed_offset)/150 + smoothed_angle/3
+    steer = (160/2 - smoothed_offset)/120 + smoothed_angle/3
     return img, steer, smoothed_speed
 
 
@@ -201,35 +201,41 @@ def pipeline(image):
         Minv = cv2.getPerspectiveTransform(dest, src)
     
     # Warp
-    image = warp_image(image)
+#    image = warp_image(image)
 
     # Save original
     image_original = image
 
+    edge_mode = 2
+
     # Find Lines Method 1: Blur and Canny. Lots of wiggles.
-#    image = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
-#    gray = cv2.GaussianBlur(gray, (7,7), 1.5)
-#    gray = cv2.Canny(gray, 30, 3)
-#    image = cv2.cvtColor(gray, cv2.COLOR_GRAY2BGR)
+    if edge_mode == 1:
+        gray = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
+        gray = cv2.GaussianBlur(gray, (7,7), 1.5)
+        image = cv2.Canny(gray, 30, 3)
 
     # Find Lines Method 2: Bilateral and Canny. Pretty good.
-    gray = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
-    gray = cv2.bilateralFilter(gray, 11, 17, 17)
-    image = cv2.Canny(gray, 30, 200)
+    if edge_mode == 2:
+        gray = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
+        gray = cv2.bilateralFilter(gray, 11, 17, 17)
+        image = cv2.Canny(gray, 30, 200)
 
     # Find Lines Method 3: Sharpen and Sobel x. Nice.
-#    image = sharpen_image(image)
-#    image = sobel_threshold(image, orient='x', sobel_kernel=3, thresh=(20, 160))
-#    image = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
+    if edge_mode == 3:
+        image = sharpen_image(image)
+        image = sobel_threshold(image, orient='x', sobel_kernel=3, thresh=(20, 160))
+        image = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
 
     # Find Lines Method 4: Filter blue colour
-#    hsv = cv2.cvtColor(image, cv2.COLOR_BGR2HSV)
-#    lower_blue = np.array([90, 10, 10])
-#    upper_blue = np.array([120, 135, 135])
-#    image = cv2.inRange(hsv, lower_blue, upper_blue)
+    if edge_mode == 4:
+        hsv = cv2.cvtColor(image, cv2.COLOR_BGR2HSV)
+        lower_blue = np.array([90, 10, 10])
+        upper_blue = np.array([120, 135, 135])
+        image = cv2.inRange(hsv, lower_blue, upper_blue)
 
     # Crop attention area
-    cropped_image = image[20:128-40, 30:160-30]
+    #cropped_image = image[20:128-40, 30:160-30]
+    cropped_image = image[20:128-40, 0:160-0]
     
     # Find lines and draw them
     lines = hough_lines(cropped_image, 1, np.pi/180, 20, min_line_len=10, max_line_gap=90)
@@ -239,7 +245,7 @@ def pipeline(image):
     lines_image, steer, speed = draw_lines(lines_image, lines, [255, 0, 0], 1)
 
     # Draw attention box
-    cv2.rectangle(lines_image, (30, 20), (160-30, 128-40), (255, 255, 50))
+    cv2.rectangle(lines_image, (0, 20), (160-1, 128-40), (255, 255, 50))
 
     # Mix
     image = cv2.addWeighted(image_original, 0.3, lines_image, 0.7, 0)

@@ -65,8 +65,8 @@ def new_websocket_connection(websocket, path):
     global frame
     print("Received websocket connection.")
     while True:
-#        text = yield from websocket.recv()
-#        process(text)
+        text = yield from websocket.recv()
+        process(text)
 
         # Send if frame available to send
         if frame is not None:

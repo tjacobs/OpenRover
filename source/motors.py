@@ -170,8 +170,8 @@ def sendMotorCommands(motorSpeedsIn, displayChannels=False, displayCommands=Fals
                 int(motorSpeeds[6]*scale+middle),
                 int(motorSpeeds[7]*scale+middle),
                 int(motorSpeeds[8]*scale+middle)]
-    if displayChannels:
-        functions.display( "Channels: " + str( channels ) )
+    #if displayChannels:
+    functions.display( "Channels: " + str( channels ) )
     try:
         board.sendCMD(16, MultiWii.SET_RAW_RC, channels)
     except Exception as error:

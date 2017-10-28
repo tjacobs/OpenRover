@@ -19,7 +19,7 @@ video_number = 0
 if os.uname()[1] == "beaglebone":
     video_number = 0
 elif os.uname()[1] == "odroid":
-    resolution = (320, 240) 
+#    resolution = (640, 480) #320, 240) 
     video_number = 6
 
 # -----------------------
@@ -114,7 +114,7 @@ time_start = time.time()
 lastPWM = 0
 vision_steering = 0
 vision_speed = 0
-acceleration_time = 0
+acceleration_time = time.time()
 gy_sum = 0
 time_now = 0
 old_time = 0
@@ -138,17 +138,17 @@ while not keys or not keys.esc_key_pressed:
     # Remote controls
     if remote:
         if remote.up:
-            acceleration += 8 * dt
+           acceleration += 8 * dt
         if remote.down:
            acceleration -= 5 * dt
         if remote.right:
-           steering -= 2.0 * dt
+           steering -= 4.0 * dt
         if remote.left:
-           steering += 2.0 * dt
+           steering += 4.0 * dt
 
     # Slow down
     acceleration *= (1.0 - (2.5 * dt))
-    steering *=     (1.0 - (0.3 * dt))
+    steering *=     (1.0 - (1.5 * dt))
  
     # Get a frame
     newFrame = camera.read()
@@ -166,37 +166,17 @@ while not keys or not keys.esc_key_pressed:
     vision_speed = vision.speed
    
     # Set steering
-    steering = vision_steering
-    acceleration = vision_speed/4
-
-    # Set acceleration
-#    if True:
-    #    if vision_speed > 0: 
-    #        acceleration += 5.0 * vision_speed * dt
-
-        # Pump the throttle 
-#        if( time.time() - acceleration_time > 1.5 ):
-#            acceleration *= (1.0 - (50.0 * dt))
-#        if( time.time() - acceleration_time > 1.7 ):
-#            acceleration_time = time.time()
+#    steering = vision_steering/1 
+#    acceleration = vision_speed/3
 
     min_acceleration = 0.0
-    max_acceleration = 0.25
-
-    # If cornering
-#    if acceleration < 0.2 and (steering < -0.2 or steering > 0.2):
-    if True:
-        if( time.time() - acceleration_time > 0.1 ):
-           min_acceleration = 0.0
-           max_acceleration = 0.0
-        if( time.time() - acceleration_time > 0.3 ):
-           min_acceleration = 0.25
-           max_acceleration = 0.25
-        if( time.time() - acceleration_time > 0.5 ):
-           acceleration_time = time.time()
+    max_acceleration = 0.0
+    if time.time() - acceleration_time > 6:
+       min_acceleration = -0.4
+       max_acceleration = 0.25
 
     # Cap
-    steering     = min(max((steering), -0.9), 0.9)
+    steering     = min(max((steering), -0.20), 0.20)
     acceleration = min(max(acceleration, min_acceleration), max_acceleration)
    
     # Post process

@@ -42,7 +42,7 @@ def update():
         global picamera
         while running:
             # Read that frame
-            #print( "Read one camera frame" )
+#            print( "Read one camera frame" )
             if rawCapture:
                 rawCapture.truncate(0)
                 picamera.capture(rawCapture, format="bgr") #, resize=(640, 360))
@@ -66,8 +66,8 @@ def startCamera(resolution, cam_number=0):
                 picamera.brightness = 80
                 rawCapture = PiRGBArray(picamera, size=resolution)
         except:
-                picamera = None
                 # Try regular USB webcam
+                picamera = None
                 try:
                     cap = cv2.VideoCapture(cam_number)
                 except:
@@ -76,8 +76,9 @@ def startCamera(resolution, cam_number=0):
                     except:
                         print("Error starting camera.")
                         pass 
-                #cap.set(3, resolution[0])
-                #cap.set(4, resolution[1])
+                cap.set(3, 320) #resolution[0])
+                cap.set(4, 240) #resolution[1])
+                #cap.set(14, 0) 
                 #cap.set(15, 0.1) # Exposure, not usually supported
 
         # Start thread
