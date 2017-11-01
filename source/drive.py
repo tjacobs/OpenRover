@@ -19,7 +19,7 @@ video_number = 0
 if os.uname()[1] == "beaglebone":
     video_number = 0
 elif os.uname()[1] == "odroid":
-#    resolution = (640, 480) #320, 240) 
+    resolution = (1024, 768)
     video_number = 6
 
 # -----------------------
