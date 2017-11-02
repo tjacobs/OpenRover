@@ -9,9 +9,7 @@ import os, sys, time, math
 # ------ Settings -------
 
 # Differential drive (two independent motors each side, like a tank), else Ackermann steering (steerable front wheels, like a car)
-differential = False
-if os.uname()[1] == "odroid":
-    differential = True
+differential = True
 
 # Camera capture, vision processing, and video transmission resolution
 resolution = (160, 128)
@@ -19,13 +17,24 @@ video_number = 0
 if os.uname()[1] == "beaglebone":
     video_number = 0
 elif os.uname()[1] == "odroid":
-#    resolution = (640, 480) #320, 240) 
+#    resolution = (640, 480) #320, 240)
     video_number = 6
 
 # -----------------------
 
 # Start
 print("Starting OpenRover on " + str(os.uname()[1]))
+
+# Magnetic sensors
+try:
+    import sensors
+    magneticSensors = sensors.AMS()
+    magneticSensors.connect(1)
+except:
+    print("No sensors.")
+
+# Arm
+import arm
 
 # Start camera
 try:
@@ -129,6 +138,7 @@ if motors is not None:
 
 # Loop
 print("Running.")
+t = 0
 while not keys or not keys.esc_key_pressed:
     # Calculate dt   
     time_now = time.time()
@@ -189,13 +199,39 @@ while not keys or not keys.esc_key_pressed:
     if frame is not None:
         jpg_frame = cv2.imencode(".jpg", frame)[1]
         remote.send_frame(jpg_frame)
+
+    currentAngles = magneticSensors.readCurrentAngles()
+
+    # Balance
+    targetAngles = [0, 0, 10, 110]
+    targetAngles[2] = math.sin(t/80.0)*20.0 + 10.0
+    targetAngles[3] = math.cos(t/80.0)*20.0 + 110.0
+    t += 1
+
+#    print("")
+#    print(currentAngles)
+#    print(targetAngles)
+    # Run movement controller to see how fast we should set our motor speeds
+    movement = arm.calculateMovement(currentAngles, targetAngles)
+#    print(movement)
+
+    motor_capped1 = min(max((movement[2]/2000), -0.50), 0.50)
+    motor_capped2 = min(max((movement[3]/2000), -0.50), 0.50)
+
+    # Display target angles and speeds
+    print( "Angles: %3d, %3d, Targets: %3d, %3d, Speeds: %3d, %3d. %3f."
+                        % (currentAngles[2], currentAngles[3], targetAngles[2], targetAngles[3], movement[2], movement[3], motor_capped1 ))
  
+    motors.setPWM(1, motor_capped1)
+    motors.setPWM(2, motor_capped2)
+
     # Output motor commands
     if motors is not None:
         if differential:
             # Steer tank style
-            motors.setPWM(1, acceleration + steering + acceleration_vision_cap + steering_vision_cap)
-            motors.setPWM(2, acceleration - steering + acceleration_vision_cap - steering_vision_cap)
+            #motors.setPWM(1, acceleration + steering + acceleration_vision_cap + steering_vision_cap)
+            #motors.setPWM(2, acceleration - steering + acceleration_vision_cap - steering_vision_cap)
+            pass
         else:
             # Steer Ackermann style
             motors.setPWM(2, steering - 0.5)
