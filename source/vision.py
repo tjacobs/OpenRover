@@ -206,7 +206,7 @@ def pipeline(image):
     # Save original
     image_original = image
 
-    edge_mode = 1
+    edge_mode = 4
 
     # Find Lines Method 1: Blur and Canny. Lots of wiggles.
     if edge_mode == 1:
@@ -229,8 +229,8 @@ def pipeline(image):
     # Find Lines Method 4: Filter blue colour
     if edge_mode == 4:
         hsv = cv2.cvtColor(image, cv2.COLOR_BGR2HSV)
-        lower_blue = np.array([90, 10, 10])
-        upper_blue = np.array([120, 135, 135])
+        lower_blue = np.array([40, 20, 20])
+        upper_blue = np.array([190, 255, 255])
         image = cv2.inRange(hsv, lower_blue, upper_blue)
 
     # Crop attention area
@@ -249,6 +249,7 @@ def pipeline(image):
 
     # Mix
     image = cv2.addWeighted(image_original, 0.3, lines_image, 0.7, 0)
+    image = image_original
     return image, steer, speed
 
 

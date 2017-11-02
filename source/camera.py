@@ -62,8 +62,9 @@ def startCamera(resolution, cam_number=0):
         try:
                 picamera = PiCamera()
                 picamera.resolution = resolution
-                picamera.contrast = 90
-                picamera.brightness = 80
+                picamera.contrast = 00
+                picamera.brightness = 50
+                picamera.exposure_mode = 'sports'
                 rawCapture = PiRGBArray(picamera, size=resolution)
         except:
                 # Try regular USB webcam
@@ -76,8 +77,12 @@ def startCamera(resolution, cam_number=0):
                     except:
                         print("Error starting camera.")
                         pass 
-                cap.set(3, 320) #resolution[0])
-                cap.set(4, 240) #resolution[1])
+                if resolution[0] == 160:
+                    cap.set(3, 320)
+                    cap.set(4, 240)
+                else:
+                    cap.set(3, resolution[0])
+                    cap.set(4, resolution[1])
                 #cap.set(14, 0) 
                 #cap.set(15, 0.1) # Exposure, not usually supported
 

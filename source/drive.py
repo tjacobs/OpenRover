@@ -13,12 +13,11 @@ differential = True
 
 # Camera capture, vision processing, and video transmission resolution
 resolution = (160, 128)
+resolution = (640, 480)
 video_number = 0
-if os.uname()[1] == "beaglebone":
-    video_number = 0
-elif os.uname()[1] == "odroid":
-#    resolution = (640, 480) #320, 240)
+if os.uname()[1] == "odroid":
     video_number = 6
+
 
 # -----------------------
 
